@@ -1,0 +1,331 @@
+From e8a9adaf2685e79f861a348a525ba381cb4c5cbb Mon Sep 17 00:00:00 2001
+From: Jocelyn Turcotte <jocelyn.turcotte@digia.com>
+Date: Wed, 5 Nov 2014 18:55:49 +0100
+Subject: [PATCH 4/8] <chromium> Convert sync points to GL fence syncs.
+
+Chromium is always producing and consuming the textures on the GPU
+thread, switching the GL context accordingly, and are using sync
+points to externally know when it is correct to send the consumming
+GL commands down the pipe of their respective GL context.
+
+Since Qt is consuming those textures in a different thread,
+synchronizing when commands are handed down to GL isn't always enough.
+The GL driver could decide to do additional scheduling and end up
+executing Qt's consuming GL commands before Chromium's producing ones
+even if they were sent to their respective context in the right order.
+
+To prevent this, convert each sync point into a real GL fence sync
+and allow Qt to communicate the dependency between consuming and
+producing commands down to GL even across threads.
+
+gfx::GLFence can now be converted to a POD TransferableFence to allow
+waiting for or destroying the sync using a QOpenGLContext, which
+gl_fence.cc wouldn't be able to use through Chromium's GL function
+table.
+
+GpuCommandBufferStub::OnRetireSyncPoint is also called as
+a result of shutdown destruction where there is a race
+condition between the ramp-down of the GLContext and the
+DestroyGLFence() and GLFence::CreateWithoutFlush() calls.
+This would result in sporadic shutdown crashes or asserts
+when a page is closed while browsing WebGL content like
+fishgl.com.
+Avoid the additional calls if there is no current context.
+
+Task-number: QTBUG-42295
+Change-Id: I5aed0df7adca9c95eda71925399d39fd770fffa1
+Reviewed-by: Andras Becsi <andras.becsi@theqtcompany.com>
+---
+ content/common/gpu/gpu_channel_manager.cc     |  1 +
+ content/common/gpu/gpu_channel_manager.h      |  4 +++
+ content/common/gpu/gpu_command_buffer_stub.cc | 35 +++++++++++++++++++++++++++
+ content/common/gpu/gpu_command_buffer_stub.h  |  1 +
+ ui/gl/gl_fence.h                              | 28 +++++++++++++++++++++
+ ui/gl/gl_fence_arb.cc                         | 12 ++++++++-
+ ui/gl/gl_fence_arb.h                          |  1 +
+ ui/gl/gl_fence_egl.cc                         |  9 +++++++
+ ui/gl/gl_fence_egl.h                          |  1 +
+ ui/gl/gl_fence_nv.cc                          |  4 +++
+ ui/gl/gl_fence_nv.h                           |  1 +
+ 11 files changed, 96 insertions(+), 1 deletion(-)
+
+diff --git a/content/common/gpu/gpu_channel_manager.cc b/content/common/gpu/gpu_channel_manager.cc
+index 3d98e58..42263ff 100644
+--- a/content/common/gpu/gpu_channel_manager.cc
++++ b/content/common/gpu/gpu_channel_manager.cc
+@@ -115,6 +115,7 @@ GpuChannelManager::~GpuChannelManager() {
+     default_offscreen_surface_->Destroy();
+     default_offscreen_surface_ = NULL;
+   }
++  DCHECK(sync_point_gl_fences_.empty());
+ }
+ 
+ gpu::gles2::ProgramCache* GpuChannelManager::program_cache() {
+diff --git a/content/common/gpu/gpu_channel_manager.h b/content/common/gpu/gpu_channel_manager.h
+index 903e32e..2e1cbc6 100644
+--- a/content/common/gpu/gpu_channel_manager.h
++++ b/content/common/gpu/gpu_channel_manager.h
+@@ -29,6 +29,7 @@ class WaitableEvent;
+ }
+ 
+ namespace gfx {
++class GLFence;
+ class GLShareGroup;
+ struct GpuMemoryBufferHandle;
+ }
+@@ -101,6 +102,9 @@ class CONTENT_EXPORT GpuChannelManager : public IPC::Listener,
+     return sync_point_manager_.get();
+   }
+ 
++  typedef base::hash_map<uint32, gfx::GLFence*> SyncPointGLFences;
++  SyncPointGLFences sync_point_gl_fences_;
++
+   gfx::GLSurface* GetDefaultOffscreenSurface();
+ 
+   GpuMemoryBufferFactory* gpu_memory_buffer_factory() {
+diff --git a/content/common/gpu/gpu_command_buffer_stub.cc b/content/common/gpu/gpu_command_buffer_stub.cc
+index e14cf98..e1ebbdb 100644
+--- a/content/common/gpu/gpu_command_buffer_stub.cc
++++ b/content/common/gpu/gpu_command_buffer_stub.cc
+@@ -36,6 +36,7 @@
+ #include "gpu/command_buffer/service/sync_point_manager.h"
+ #include "gpu/command_buffer/service/valuebuffer_manager.h"
+ #include "ui/gl/gl_bindings.h"
++#include "ui/gl/gl_fence.h"
+ #include "ui/gl/gl_switches.h"
+ 
+ #if defined(OS_WIN)
+@@ -111,6 +112,15 @@ const int64 kHandleMoreWorkPeriodBusyMs = 1;
+ // Prevents idle work from being starved.
+ const int64 kMaxTimeSinceIdleMs = 10;
+ 
++void DestroyGLFence(GpuChannelManager::SyncPointGLFences &fences, uint32 sync_point)
++{
++  GpuChannelManager::SyncPointGLFences::iterator it = fences.find(sync_point);
++  if (it != fences.end()) {
++    delete it->second;
++    fences.erase(it);
++  }
++}
++
+ class DevToolsChannelData : public base::trace_event::ConvertableToTraceFormat {
+  public:
+   static scoped_refptr<base::trace_event::ConvertableToTraceFormat>
+@@ -174,6 +184,7 @@ GpuCommandBufferStub::GpuCommandBufferStub(
+       last_memory_allocation_valid_(false),
+       watchdog_(watchdog),
+       sync_point_wait_count_(0),
++      last_fence_sync_point_(0),
+       delayed_work_scheduled_(false),
+       previous_messages_processed_(0),
+       active_url_(active_url),
+@@ -232,7 +243,10 @@ bool GpuCommandBufferStub::OnMessageReceived(const IPC::Message& message) {
+       message.type() != GpuCommandBufferMsg_WaitForGetOffsetInRange::ID &&
+       message.type() != GpuCommandBufferMsg_RegisterTransferBuffer::ID &&
+       message.type() != GpuCommandBufferMsg_DestroyTransferBuffer::ID &&
++#if !defined(USE_QT)
++      // Qt needs the context to be current here to insert/destroy fences.
+       message.type() != GpuCommandBufferMsg_RetireSyncPoint::ID &&
++#endif // USE_QT
+       message.type() != GpuCommandBufferMsg_SignalSyncPoint::ID &&
+       message.type() !=
+           GpuCommandBufferMsg_SetClientHasMemoryAllocationChangedCallback::ID) {
+@@ -429,6 +443,7 @@ void GpuCommandBufferStub::Destroy() {
+                     OnWillDestroyStub());
+ 
+   if (decoder_) {
++    DestroyGLFence(channel_->gpu_channel_manager()->sync_point_gl_fences_, last_fence_sync_point_);
+     decoder_->Destroy(have_context);
+     decoder_.reset();
+   }
+@@ -860,6 +875,26 @@ void GpuCommandBufferStub::OnRetireSyncPoint(uint32 sync_point) {
+   DCHECK(!sync_points_.empty() && sync_points_.front() == sync_point);
+   sync_points_.pop_front();
+   GpuChannelManager* manager = channel_->gpu_channel_manager();
++
++#if defined(USE_QT)
++  bool has_current_context = !!gfx::GLContext::GetCurrent();
++  if (has_current_context) {
++    // Only keep the last fence alive to keep its temporary ownership in GpuCommandBufferStub
++    // simple in case where Qt would not pick this fence to eventually destroy it.
++    DestroyGLFence(manager->sync_point_gl_fences_, last_fence_sync_point_);
++    // We submitted all resource-producing GL commands, convert the logical sync point into a GL fence
++    // to allow Qt's GL context to wait for the results of commands submitted in this context using the
++    // sync point as reference.
++    scoped_ptr<gfx::GLFence> fence = scoped_ptr<gfx::GLFence>(gfx::GLFence::Create());
++    if (fence)
++      manager->sync_point_gl_fences_.insert(std::make_pair(sync_point, fence.release()));
++    // Flush regardless of the success of the fence creation to at least make sure that commands
++    // producing our textures are in the pipe before the scene graph inserts its own on the other thread.
++    //glFlush();
++    last_fence_sync_point_ = sync_point;
++  }
++#endif
++
+   manager->sync_point_manager()->RetireSyncPoint(sync_point);
+ }
+ 
+diff --git a/content/common/gpu/gpu_command_buffer_stub.h b/content/common/gpu/gpu_command_buffer_stub.h
+index c9e215c..23c3d7b 100644
+--- a/content/common/gpu/gpu_command_buffer_stub.h
++++ b/content/common/gpu/gpu_command_buffer_stub.h
+@@ -269,6 +269,7 @@ class GpuCommandBufferStub
+   // A queue of sync points associated with this stub.
+   std::deque<uint32> sync_points_;
+   int sync_point_wait_count_;
++  uint32 last_fence_sync_point_;
+ 
+   bool delayed_work_scheduled_;
+   uint64 previous_messages_processed_;
+diff --git a/ui/gl/gl_fence.h b/ui/gl/gl_fence.h
+index 76511f4..fd98800 100644
+--- a/ui/gl/gl_fence.h
++++ b/ui/gl/gl_fence.h
+@@ -8,8 +8,34 @@
+ #include "base/basictypes.h"
+ #include "ui/gl/gl_export.h"
+ 
++typedef void *EGLDisplay;
++typedef void *EGLSyncKHR;
++typedef struct __GLsync *GLsync;
++
+ namespace gfx {
+ 
++union TransferableFence {
++    enum SyncType {
++        NoSync,
++        EglSync,
++        ArbSync
++    };
++    SyncType type;
++    struct {
++        SyncType type;
++        EGLDisplay display;
++        EGLSyncKHR sync;
++    } egl;
++    struct {
++        SyncType type;
++        GLsync sync;
++    } arb;
++
++    TransferableFence() : type(NoSync) { }
++    operator bool() { return type != NoSync; }
++    void reset() { type = NoSync; }
++};
++
+ class GL_EXPORT GLFence {
+  public:
+   GLFence();
+@@ -18,6 +44,8 @@ class GL_EXPORT GLFence {
+   static bool IsSupported();
+   static GLFence* Create();
+ 
++  virtual TransferableFence Transfer() = 0;
++
+   virtual bool HasCompleted() = 0;
+   virtual void ClientWait() = 0;
+ 
+diff --git a/ui/gl/gl_fence_arb.cc b/ui/gl/gl_fence_arb.cc
+index 5c6b337..903b06c 100644
+--- a/ui/gl/gl_fence_arb.cc
++++ b/ui/gl/gl_fence_arb.cc
+@@ -29,6 +29,16 @@ GLFenceARB::GLFenceARB() {
+   glFlush();
+ }
+ 
++TransferableFence GLFenceARB::Transfer() {
++  gfx::TransferableFence ret;
++  if (sync_) {
++    ret.type = gfx::TransferableFence::ArbSync;
++    ret.arb.sync = sync_;
++    sync_ = 0;
++  }
++  return ret;
++}
++
+ bool GLFenceARB::HasCompleted() {
+   // Handle the case where FenceSync failed.
+   if (!sync_)
+@@ -61,7 +71,7 @@ void GLFenceARB::ServerWait() {
+ }
+ 
+ GLFenceARB::~GLFenceARB() {
+-  DCHECK_EQ(GL_TRUE, glIsSync(sync_));
++  DCHECK_EQ(GL_TRUE, !sync_ || glIsSync(sync_));
+   glDeleteSync(sync_);
+ }
+ 
+diff --git a/ui/gl/gl_fence_arb.h b/ui/gl/gl_fence_arb.h
+index 3975efe..3c97f02 100644
+--- a/ui/gl/gl_fence_arb.h
++++ b/ui/gl/gl_fence_arb.h
+@@ -17,6 +17,7 @@ class GL_EXPORT GLFenceARB : public GLFence {
+   ~GLFenceARB() override;
+ 
+   // GLFence implementation:
++  TransferableFence Transfer() override;
+   bool HasCompleted() override;
+   void ClientWait() override;
+   void ServerWait() override;
+diff --git a/ui/gl/gl_fence_egl.cc b/ui/gl/gl_fence_egl.cc
+index 641b8c2..989de19 100644
+--- a/ui/gl/gl_fence_egl.cc
++++ b/ui/gl/gl_fence_egl.cc
+@@ -27,6 +27,15 @@ GLFenceEGL::GLFenceEGL() {
+   glFlush();
+ }
+ 
++TransferableFence GLFenceEGL::Transfer() {
++  gfx::TransferableFence ret;
++  ret.type = gfx::TransferableFence::EglSync;
++  ret.egl.display = display_;
++  ret.egl.sync = sync_;
++  sync_ = 0;
++  return ret;
++}
++
+ bool GLFenceEGL::HasCompleted() {
+   EGLint value = 0;
+   if (eglGetSyncAttribKHR(display_, sync_, EGL_SYNC_STATUS_KHR, &value) !=
+diff --git a/ui/gl/gl_fence_egl.h b/ui/gl/gl_fence_egl.h
+index 5b6006c..5e022f0 100644
+--- a/ui/gl/gl_fence_egl.h
++++ b/ui/gl/gl_fence_egl.h
+@@ -19,6 +19,7 @@ class GL_EXPORT GLFenceEGL : public GLFence {
+   ~GLFenceEGL() override;
+ 
+   // GLFence implementation:
++  TransferableFence Transfer() override;
+   bool HasCompleted() override;
+   void ClientWait() override;
+   void ServerWait() override;
+diff --git a/ui/gl/gl_fence_nv.cc b/ui/gl/gl_fence_nv.cc
+index 0e23b28..1a741a9 100644
+--- a/ui/gl/gl_fence_nv.cc
++++ b/ui/gl/gl_fence_nv.cc
+@@ -25,6 +25,10 @@ GLFenceNV::GLFenceNV() {
+   glFlush();
+ }
+ 
++TransferableFence GLFenceNV::Transfer() {
++  return gfx::TransferableFence();
++}
++
+ bool GLFenceNV::HasCompleted() {
+   DCHECK(glIsFenceNV(fence_));
+   return !!glTestFenceNV(fence_);
+diff --git a/ui/gl/gl_fence_nv.h b/ui/gl/gl_fence_nv.h
+index b1dc88f..bf52513 100644
+--- a/ui/gl/gl_fence_nv.h
++++ b/ui/gl/gl_fence_nv.h
+@@ -17,6 +17,7 @@ class GL_EXPORT GLFenceNV : public GLFence {
+   ~GLFenceNV() override;
+ 
+   // GLFence implementation:
++  TransferableFence Transfer() override;
+   bool HasCompleted() override;
+   void ClientWait() override;
+   void ServerWait() override;
+-- 
+2.0.5
+

@@ -1,0 +1,13 @@
+<RCC>
+  <qresource prefix="/">
+    <file>quicksilver_shell.qml</file>
+    <file>quicksilver_shell_sf.qml</file>
+    <file>icons/back.png</file>
+    <file>icons/forward.png</file>
+    <file>icons/reload.png</file>
+    <file>icons/stop.png</file>
+    <file>icons/window-new.png</file>
+    <file>icons/window-close.png</file>
+  </qresource>
+</RCC>
+

@@ -1,0 +1,381 @@
+From 3209b7ae3857577d5d3315b26db3dfc0c2281371 Mon Sep 17 00:00:00 2001
+From: Peter Tworek <tworaz666@gmail.com>
+Date: Mon, 16 Mar 2015 00:04:41 +0100
+Subject: [PATCH 5/8] Make it possible to build standalone qt port of chromium
+
+This patch adds necessary USE_QT ifdef guards making it possible to use
+Qt instead of aura as the platform abstraction and UI toolkit.
+
+Signed-off-by: Peter Tworek <tworaz666@gmail.com>
+---
+ base/run_loop.h                                   |  9 +++++++++
+ content/browser/browser_main_loop.cc              | 12 ++++++++++--
+ content/browser/gpu/compositor_util.cc            |  2 +-
+ content/browser/gpu/gpu_process_host.cc           |  2 +-
+ content/browser/web_contents/web_contents_impl.cc | 10 ++++++++++
+ content/browser/web_contents/web_contents_impl.h  |  8 ++++++++
+ content/content.gyp                               |  2 ++
+ content/content_browser.gypi                      |  1 +
+ content/content_common.gypi                       |  1 +
+ content/content_shell.gypi                        |  3 +++
+ content/public/browser/web_contents.h             |  9 +++++++++
+ ui/base/clipboard/clipboard.h                     |  4 ++--
+ ui/base/ui_base.gyp                               |  2 ++
+ ui/gfx/native_widget_types.h                      | 14 ++++++++++++--
+ ui/gl/gl.gyp                                      |  2 ++
+ 15 files changed, 73 insertions(+), 8 deletions(-)
+
+diff --git a/base/run_loop.h b/base/run_loop.h
+index 0024108..045708b 100644
+--- a/base/run_loop.h
++++ b/base/run_loop.h
+@@ -10,6 +10,12 @@
+ #include "base/memory/weak_ptr.h"
+ #include "base/message_loop/message_loop.h"
+ 
++#if defined(USE_QT)
++namespace QuickSilverImpl {
++class GlobalData;
++}
++#endif
++
+ namespace base {
+ #if defined(OS_ANDROID)
+ class MessagePumpForUI;
+@@ -77,6 +83,9 @@ class BASE_EXPORT RunLoop {
+   // BeforeRun and AfterRun directly.
+   friend class base::MessagePumpForUI;
+ #endif
++#if defined(USE_QT)
++  friend class QuickSilverImpl::GlobalData;
++#endif
+ 
+ #if defined(OS_IOS)
+   // iOS doesn't support the blocking MessageLoop::Run, so it calls
+diff --git a/content/browser/browser_main_loop.cc b/content/browser/browser_main_loop.cc
+index fcb540c..385674c 100644
+--- a/content/browser/browser_main_loop.cc
++++ b/content/browser/browser_main_loop.cc
+@@ -61,7 +61,7 @@
+ #include "net/ssl/ssl_config_service.h"
+ #include "ui/base/clipboard/clipboard.h"
+ 
+-#if defined(USE_AURA) || (defined(OS_MACOSX) && !defined(OS_IOS))
++#if defined(USE_AURA) || (defined(OS_MACOSX) && !defined(OS_IOS)) || defined(USE_QT)
+ #include "content/browser/compositor/image_transport_factory.h"
+ #endif
+ 
+@@ -70,6 +70,10 @@
+ #include "ui/aura/env.h"
+ #endif
+ 
++#if defined(USE_QT)
++#include "ui/qt/env.h"
++#endif
++
+ #if !defined(OS_IOS)
+ #include "content/browser/renderer_host/render_process_host_impl.h"
+ #endif
+@@ -1058,7 +1062,7 @@ int BrowserMainLoop::BrowserThreadsStarted() {
+ 
+   bool always_uses_gpu = true;
+   bool established_gpu_channel = false;
+-#if defined(USE_AURA) || defined(OS_MACOSX)
++#if defined(USE_AURA) || defined(OS_MACOSX) || defined(USE_QT)
+   established_gpu_channel = true;
+   if (!GpuDataManagerImpl::GetInstance()->CanUseGpuBrowserCompositor() ||
+       parsed_command_line_.HasSwitch(switches::kDisableGpuEarlyInit)) {
+@@ -1211,6 +1215,10 @@ bool BrowserMainLoop::InitializeToolkit() {
+   aura::Env::CreateInstance(true);
+ #endif  // defined(USE_AURA)
+ 
++#if defined(USE_QT)
++  qt::Env::CreateInstance(true);
++#endif
++
+   if (parts_)
+     parts_->ToolkitInitialized();
+ 
+diff --git a/content/browser/gpu/compositor_util.cc b/content/browser/gpu/compositor_util.cc
+index 98cbf61..e3ea051 100644
+--- a/content/browser/gpu/compositor_util.cc
++++ b/content/browser/gpu/compositor_util.cc
+@@ -190,7 +190,7 @@ bool IsDelegatedRendererEnabled() {
+       *base::CommandLine::ForCurrentProcess();
+   bool enabled = false;
+ 
+-#if defined(USE_AURA) || defined(OS_MACOSX)
++#if defined(USE_AURA) || defined(OS_MACOSX) || defined(USE_QT)
+   // Enable on Aura and Mac.
+   enabled = true;
+ #endif
+diff --git a/content/browser/gpu/gpu_process_host.cc b/content/browser/gpu/gpu_process_host.cc
+index be14374..6f2dd63 100644
+--- a/content/browser/gpu/gpu_process_host.cc
++++ b/content/browser/gpu/gpu_process_host.cc
+@@ -106,7 +106,7 @@ static const char* const kSwitchNames[] = {
+   switches::kDisableRemoteCoreAnimation,
+   switches::kEnableSandboxLogging,
+ #endif
+-#if defined(USE_AURA)
++#if defined(USE_AURA) || defined(USE_QT)
+   switches::kUIPrioritizeInGpuProcess,
+ #endif
+ #if defined(USE_OZONE)
+diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
+index 24122cd..9eb4026 100644
+--- a/content/browser/web_contents/web_contents_impl.cc
++++ b/content/browser/web_contents/web_contents_impl.cc
+@@ -1196,6 +1196,10 @@ void WebContentsImpl::Init(const WebContents::CreateParams& params) {
+   // it should be hidden.
+   should_normally_be_visible_ = !params.initially_hidden;
+ 
++#if defined(USE_QT)
++  platform_data_ = params.platform_data;
++#endif
++
+   // Either both routing ids can be given, or neither can be.
+   DCHECK((params.routing_id == MSG_ROUTING_NONE &&
+               params.main_frame_routing_id == MSG_ROUTING_NONE) ||
+@@ -4402,6 +4406,12 @@ bool WebContentsImpl::GetAllowOtherViews() {
+ 
+ #endif
+ 
++#if defined(USE_QT)
++void* WebContentsImpl::GetPlatformData() const {
++  return platform_data_;
++}
++#endif
++
+ void WebContentsImpl::OnDialogClosed(int render_process_id,
+                                      int render_frame_id,
+                                      IPC::Message* reply_msg,
+diff --git a/content/browser/web_contents/web_contents_impl.h b/content/browser/web_contents/web_contents_impl.h
+index 6753535..48b69f8 100644
+--- a/content/browser/web_contents/web_contents_impl.h
++++ b/content/browser/web_contents/web_contents_impl.h
+@@ -358,6 +358,10 @@ class CONTENT_EXPORT WebContentsImpl
+   bool GetAllowOtherViews() override;
+ #endif
+ 
++#if defined(USE_QT)
++  void* GetPlatformData() const override;
++#endif
++
+   // Implementation of PageNavigator.
+   WebContents* OpenURL(const OpenURLParams& params) override;
+ 
+@@ -1259,6 +1263,10 @@ class CONTENT_EXPORT WebContentsImpl
+   scoped_ptr<MediaWebContentsObserver> media_web_contents_observer_;
+ #endif
+ 
++#if defined(USE_QT)
++  void* platform_data_;
++#endif
++
+   base::WeakPtrFactory<WebContentsImpl> loading_weak_factory_;
+ 
+   DISALLOW_COPY_AND_ASSIGN(WebContentsImpl);
+diff --git a/content/content.gyp b/content/content.gyp
+index a5d4829..34fecf1 100644
+--- a/content/content.gyp
++++ b/content/content.gyp
+@@ -7,6 +7,8 @@
+     'chromium_code': 1,  # Use higher warning level.
+     'chromium_enable_vtune_jit_for_v8%': 0,  # enable the vtune support for V8 engine.
+     'directxsdk_exists': '<!pymod_do_main(dir_exists ../third_party/directxsdk)',
++    'external_content_browser_deps%': [],
++    'external_content_common_deps%': [],
+   },
+   'target_defaults': {
+     'defines': ['CONTENT_IMPLEMENTATION'],
+diff --git a/content/content_browser.gypi b/content/content_browser.gypi
+index 5512ae7..2c7bb3e 100644
+--- a/content/content_browser.gypi
++++ b/content/content_browser.gypi
+@@ -36,6 +36,7 @@
+     'browser/service_worker/service_worker_proto.gyp:service_worker_proto',
+     'browser/speech/proto/speech_proto.gyp:speech_proto',
+     'content_common_mojo_bindings.gyp:content_common_mojo_bindings',
++    '<@(external_content_browser_deps)',
+   ],
+   'export_dependent_settings': [
+     '../ui/accessibility/accessibility.gyp:ax_gen',
+diff --git a/content/content_common.gypi b/content/content_common.gypi
+index c1ae9cf..4ee147f 100644
+--- a/content/content_common.gypi
++++ b/content/content_common.gypi
+@@ -20,6 +20,7 @@
+     '../ui/gfx/ipc/gfx_ipc.gyp:gfx_ipc',
+     '../ui/shell_dialogs/shell_dialogs.gyp:shell_dialogs',
+     '../url/url.gyp:url_lib',
++    '<@(external_content_common_deps)',
+   ],
+   'include_dirs': [
+     '..',
+diff --git a/content/content_shell.gypi b/content/content_shell.gypi
+index 8c32ab7..e553a0f 100644
+--- a/content/content_shell.gypi
++++ b/content/content_shell.gypi
+@@ -16,6 +16,7 @@
+        'use_custom_freetype%': 0,
+       }],
+     ],
++    'external_content_shell_deps%': [],
+   },
+   'targets': [
+     {
+@@ -69,6 +70,7 @@
+         '../ui/gl/gl.gyp:gl',
+         '../url/url.gyp:url_lib',
+         '../v8/tools/gyp/v8.gyp:v8',
++        '<@(external_content_shell_deps)',
+       ],
+       'include_dirs': [
+         '..',
+@@ -543,6 +545,7 @@
+         'content_shell_pak',
+         '../third_party/mesa/mesa.gyp:osmesa',
+         '../tools/imagediff/image_diff.gyp:image_diff',
++        '<@(external_content_shell_deps)',
+       ],
+       'include_dirs': [
+         '..',
+diff --git a/content/public/browser/web_contents.h b/content/public/browser/web_contents.h
+index 4380412..c3625b5 100644
+--- a/content/public/browser/web_contents.h
++++ b/content/public/browser/web_contents.h
+@@ -128,6 +128,11 @@ class WebContents : public PageNavigator,
+     // RenderFrame, have already been created on the renderer side, and
+     // WebContents construction should take this into account.
+     bool renderer_initiated_creation;
++
++#if defined(USE_QT)
++    // Platform specific data associated with given WebContents instance.
++    void* platform_data;
++#endif
+   };
+ 
+   // Creates a new WebContents.
+@@ -641,6 +646,10 @@ class WebContents : public PageNavigator,
+   virtual bool GetAllowOtherViews() = 0;
+ #endif  // OS_ANDROID
+ 
++#if defined(USE_QT)
++  virtual void* GetPlatformData() const = 0;
++#endif
++
+  private:
+   // This interface should only be implemented inside content.
+   friend class WebContentsImpl;
+diff --git a/ui/base/clipboard/clipboard.h b/ui/base/clipboard/clipboard.h
+index 6c23a6d..a488626 100644
+--- a/ui/base/clipboard/clipboard.h
++++ b/ui/base/clipboard/clipboard.h
+@@ -74,7 +74,7 @@ class UI_BASE_EXPORT Clipboard : NON_EXPORTED_BASE(public base::ThreadChecker) {
+ 
+ #if defined(OS_WIN)
+     const FORMATETC& ToFormatEtc() const { return data_; }
+-#elif defined(USE_AURA) || defined(OS_ANDROID)
++#elif defined(USE_AURA) || defined(OS_ANDROID) || defined(USE_QT)
+     const std::string& ToString() const { return data_; }
+ #elif defined(OS_MACOSX)
+     NSString* ToNSString() const { return data_; }
+@@ -100,7 +100,7 @@ class UI_BASE_EXPORT Clipboard : NON_EXPORTED_BASE(public base::ThreadChecker) {
+     explicit FormatType(UINT native_format);
+     FormatType(UINT native_format, LONG index);
+     FORMATETC data_;
+-#elif defined(USE_AURA) || defined(OS_ANDROID)
++#elif defined(USE_AURA) || defined(OS_ANDROID) || defined(USE_QT)
+     explicit FormatType(const std::string& native_format);
+     std::string data_;
+ #elif defined(OS_MACOSX)
+diff --git a/ui/base/ui_base.gyp b/ui/base/ui_base.gyp
+index 29fac97..cd3feb6 100644
+--- a/ui/base/ui_base.gyp
++++ b/ui/base/ui_base.gyp
+@@ -5,6 +5,7 @@
+ {
+   'variables': {
+     'chromium_code': 1,
++    'external_ui_base_deps%': [],
+   },
+   'targets': [
+     {
+@@ -28,6 +29,7 @@
+         '../gfx/gfx.gyp:gfx_geometry',
+         '../resources/ui_resources.gyp:ui_resources',
+         '../strings/ui_strings.gyp:ui_strings',
++	'<@(external_ui_base_deps)',
+       ],
+       'defines': [
+         'UI_BASE_IMPLEMENTATION',
+diff --git a/ui/gfx/native_widget_types.h b/ui/gfx/native_widget_types.h
+index 1a8256b..8b63d7f 100644
+--- a/ui/gfx/native_widget_types.h
++++ b/ui/gfx/native_widget_types.h
+@@ -42,7 +42,7 @@
+ // 'views' and with our Chrome UI code where the elements are also called
+ // 'views'.
+ 
+-#if defined(USE_AURA)
++#if defined(USE_AURA) || defined(USE_QT)
+ class SkRegion;
+ namespace aura {
+ class Window;
+@@ -53,6 +53,10 @@ class Event;
+ }
+ #endif  // defined(USE_AURA)
+ 
++#if defined(USE_QT)
++class QQuickItem;
++#endif
++
+ #if defined(OS_WIN)
+ #include <windows.h>  // NOLINT
+ typedef struct HFONT__* HFONT;
+@@ -138,6 +142,12 @@ typedef ui::ViewAndroid* NativeView;
+ typedef ui::WindowAndroid* NativeWindow;
+ typedef void* NativeRegion;
+ typedef jobject NativeEvent;
++#elif defined(USE_QT)
++typedef int NativeCursor; // Actually Qt::CursorShape
++typedef QQuickItem* NativeView;
++typedef void* NativeWindow;
++typedef SkRegion* NativeRegion;
++typedef ui::Event* NativeEvent;
+ #endif
+ 
+ #if defined(OS_WIN)
+@@ -179,7 +189,7 @@ typedef void* NativeViewAccessible;
+ #endif
+ 
+ // A constant value to indicate that gfx::NativeCursor refers to no cursor.
+-#if defined(USE_AURA)
++#if defined(USE_AURA) || defined(USE_QT)
+ const int kNullCursor = 0;
+ #else
+ const gfx::NativeCursor kNullCursor = static_cast<gfx::NativeCursor>(NULL);
+diff --git a/ui/gl/gl.gyp b/ui/gl/gl.gyp
+index 9a2c401..162635b 100644
+--- a/ui/gl/gl.gyp
++++ b/ui/gl/gl.gyp
+@@ -5,6 +5,7 @@
+ {
+   'variables': {
+     'chromium_code': 1,
++    'external_ui_gl_deps%': [],
+   },
+ 
+   'targets': [
+@@ -20,6 +21,7 @@
+         '<(DEPTH)/third_party/mesa/mesa.gyp:mesa_headers',
+         '<(DEPTH)/ui/gfx/gfx.gyp:gfx',
+         '<(DEPTH)/ui/gfx/gfx.gyp:gfx_geometry',
++        '<@(external_ui_gl_deps)',
+       ],
+       'defines': [
+         'GL_IMPLEMENTATION',
+-- 
+2.0.5
+

@@ -1,0 +1,45 @@
+From 9045f82c3f672f23801bb2099833c08f7bff2990 Mon Sep 17 00:00:00 2001
+From: Peter Tworek <tworaz666@gmail.com>
+Date: Wed, 25 Mar 2015 22:16:48 +0100
+Subject: [PATCH 7/8] Don't use EGL_KHR_surfaceless_context extension on X11
+ with EGL.
+
+For some reason this crashes inside mesa.
+
+Upstream bug: https://code.google.com/p/chromium/issues/detail?id=462948
+
+Signed-off-by: Peter Tworek <tworaz666@gmail.com>
+---
+ ui/gl/gl_surface_egl.cc | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/ui/gl/gl_surface_egl.cc b/ui/gl/gl_surface_egl.cc
+index 61c3c05..fefab55 100644
+--- a/ui/gl/gl_surface_egl.cc
++++ b/ui/gl/gl_surface_egl.cc
+@@ -33,6 +33,10 @@ extern "C" {
+ #include "ui/ozone/public/surface_factory_ozone.h"
+ #endif
+ 
++#if defined(USE_QT)
++#include <QGuiApplication>
++#endif
++
+ #if !defined(EGL_FIXED_SIZE_ANGLE)
+ #define EGL_FIXED_SIZE_ANGLE 0x3201
+ #endif
+@@ -250,6 +254,11 @@ bool GLSurfaceEGL::InitializeOneOff() {
+   // Check if SurfacelessEGL is supported.
+   g_egl_surfaceless_context_supported =
+       HasEGLExtension("EGL_KHR_surfaceless_context");
++#if defined(USE_QT)
++  QString platform = qApp->platformName().toLower();
++  if (platform == QLatin1String("xcb"))
++    g_egl_surfaceless_context_supported = false;
++#endif
+   if (g_egl_surfaceless_context_supported) {
+     // EGL_KHR_surfaceless_context is supported but ensure
+     // GL_OES_surfaceless_context is also supported. We need a current context
+-- 
+2.0.5
+

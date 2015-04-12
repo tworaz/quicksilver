@@ -1,0 +1,30 @@
+From e0f405a8c54efdd6590ecc3515f8bc10a98df77a Mon Sep 17 00:00:00 2001
+From: Piotr Tworek <p.tworek@samsung.com>
+Date: Fri, 27 Mar 2015 17:09:18 +0100
+Subject: [PATCH 8/8] Add const keyword to WebCursor::GetNativeCursor()
+
+The function should not actually modify WebCursor instance. Since
+content layer often gives us const WebCursor& the function is not usable
+anyway.
+
+Signed-off-by: Piotr Tworek <p.tworek@samsung.com>
+---
+ content/common/cursors/webcursor.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/content/common/cursors/webcursor.h b/content/common/cursors/webcursor.h
+index cd78c58..b12e21c 100644
+--- a/content/common/cursors/webcursor.h
++++ b/content/common/cursors/webcursor.h
+@@ -94,7 +94,7 @@ class CONTENT_EXPORT WebCursor {
+   bool IsEqual(const WebCursor& other) const;
+ 
+   // Returns a native cursor representing the current WebCursor instance.
+-  gfx::NativeCursor GetNativeCursor();
++  gfx::NativeCursor GetNativeCursor() const;
+ 
+ #if defined(OS_WIN)
+   // Initialize this from the given Windows cursor. The caller must ensure that
+-- 
+2.0.5
+

@@ -1,0 +1,43 @@
+From 259bbc01bb18c9c3d077f2194cb53dcef93b94b5 Mon Sep 17 00:00:00 2001
+From: Peter Tworek <tworaz666@gmail.com>
+Date: Thu, 9 Apr 2015 21:53:07 +0200
+Subject: [PATCH 9/9] Don't include preloaded ICU headers when using system
+ version of the lib
+
+Without this fix when compiling the code with use_system_icu=1 flag
+preloaded icu headers from third_party/icu would still used.
+
+Signed-off-by: Peter Tworek <tworaz666@gmail.com>
+---
+ ui/gfx/gfx.gyp | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/ui/gfx/gfx.gyp b/ui/gfx/gfx.gyp
+index 3dfa01b..7f6b9e9 100644
+--- a/ui/gfx/gfx.gyp
++++ b/ui/gfx/gfx.gyp
+@@ -93,9 +93,6 @@
+       'defines': [
+         'GFX_IMPLEMENTATION',
+       ],
+-      'include_dirs': [
+-        '<(DEPTH)/third_party/icu/source/common'
+-      ],
+       'sources': [
+         'android/device_display_info.cc',
+         'android/device_display_info.h',
+@@ -412,6 +409,11 @@
+             '<(DEPTH)/build/linux/system.gyp:fontconfig',
+           ],
+         }],
++        ['use_system_icu!=1', {
++          'include_dirs': [
++            '<(DEPTH)/third_party/icu/source/common'
++          ],
++        }],
+       ],
+       'target_conditions': [
+         # Need 'target_conditions' to override default filename_rules to include
+-- 
+2.0.5
+
