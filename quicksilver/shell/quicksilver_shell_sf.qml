@@ -11,67 +11,63 @@ ApplicationWindow {
 
   initialPage: Component {
     Page {
-      SilicaFlickable {
-        anchors.fill: parent
+      QuickSilverWebView {
+        id: webview
+        anchors.top: parent.top
+        anchors.bottom: addressBar.top
+        width: parent.width
 
-        QuickSilverWebView {
-          id: webview
-          anchors.top: parent.top
-          anchors.bottom: addressBar.top
-          width: parent.width
+        Component.onCompleted: {
+          if (InitialURL) {
+            loadURL(InitialURL)
+          } else {
+            loadURL(kHomePage)
+          }
+        }
 
-          Component.onCompleted: {
-            if (InitialURL) {
-              loadURL(InitialURL)
-            } else {
-              loadURL(kHomePage)
-            }
-          }
+        onTitleChanged: {
+          console.log("Title changed: " + title)
+        }
 
-          onTitleChanged: {
-            console.log("Title changed: " + title)
+        onLoadingChanged: {
+          if (loading) {
+            console.log("Loading started")
+          } else {
+            console.log("Loading finished")
           }
+        }
 
-          onLoadingChanged: {
-            if (loading) {
-              console.log("Loading started")
-            } else {
-              console.log("Loading finished")
-            }
-          }
+        onLoadProgressChanged: {
+          console.log("Loading progress: " + loadProgress)
+        }
+      } // QSWebView
 
-          onLoadProgressChanged: {
-            console.log("Loading progress: " + loadProgress)
-          }
-        } // QSWebView
+      Row {
+        id: addressBar
+        anchors.bottom: parent.bottom
+        width: parent.width
 
-        Row {
-          id: addressBar
-          anchors.bottom: parent.bottom
-          width: parent.width
-
-          IconButton {
-            id: back
-            icon.source: "image://theme/icon-m-back"
-            enabled: webview.canGoBack
-            onClicked: webview.back()
+        IconButton {
+          id: back
+          icon.source: "image://theme/icon-m-back"
+          enabled: webview.canGoBack
+          onClicked: webview.back()
+        }
+        IconButton {
+          id: forward
+          icon.source: "image://theme/icon-m-forward"
+          enabled: webview.canGoForward
+          onClicked: webview.forward()
+        }
+        TextField {
+          width: parent.width - back.width - forward.width
+          text: webview.currentURL
+          EnterKey.onClicked: {
+            webview.loadURL(text)
+            webview.forceActiveFocus()
           }
-          IconButton {
-            id: forward
-            icon.source: "image://theme/icon-m-forward"
-            enabled: webview.canGoForward
-            onClicked: webview.forward()
-          }
-          TextField {
-            width: parent.width - back.width - forward.width
-            text: webview.currentURL
-            EnterKey.onClicked: {
-              webview.loadURL(text)
-              webview.forceActiveFocus()
-            }
-          }
-        } // Row
-      }
+        }
+      } // Row
     }
   }
 

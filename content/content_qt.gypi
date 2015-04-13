@@ -10,6 +10,7 @@
     ],
     'external_content_common_deps': [
       '<(DEPTH)/qt_port/build/system.gyp:qtgui',
+      '<(DEPTH)/qt_port/content/content_qt.gyp:content_common_qt',
     ],
     'external_content_shell_deps': [
       '<(DEPTH)/qt_port/content/content_qt.gyp:shell_lib_qt',

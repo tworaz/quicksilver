@@ -4,26 +4,27 @@
 
 #include "quicksilver/browser/global_data.h"
 
-#include <QOpenGLContext>
 #include <QGuiApplication>
+#include <QOpenGLContext>
 #include <QScreen>
 #undef signals
 
 #include "base/command_line.h"
 #include "base/logging.h"
 #include "base/run_loop.h"
+#include "content/browser/gpu/gpu_process_host.h"
 #include "content/browser/renderer_host/render_process_host_impl.h"
 #include "content/browser/utility_process_host_impl.h"
-#include "content/browser/gpu/gpu_process_host.h"
 #include "content/gpu/in_process_gpu_thread.h"
-#include "content/renderer/in_process_renderer_thread.h"
 #include "content/public/app/content_main.h"
 #include "content/public/app/content_main_runner.h"
 #include "content/public/browser/browser_main_runner.h"
+#include "content/public/common/content_switches_qt.h"
 #include "content/public/common/main_function_params.h"
+#include "content/renderer/in_process_renderer_thread.h"
 #include "content/utility/in_process_utility_thread.h"
-#include "quicksilver/common/content_main_delegate_qs.h"
 #include "quicksilver/browser/message_pump_qt.h"
+#include "quicksilver/common/content_main_delegate_qs.h"
 
 Q_GUI_EXPORT void qt_gl_set_global_share_context(QOpenGLContext*);
 
@@ -77,6 +78,12 @@ bool GlobalData::Initialize(int argc, char* argv[]) {
   base::MessageLoop::InitMessagePumpForUIFactory(MessagePumpFactory);
 
   base::CommandLine::Init(argc, (const char**)argv);
+
+  if (base::CommandLine::ForCurrentProcess()->
+          HasSwitch(switches::kSimulateTouchScreenWithMouse)) {
+    qApp->setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents, true);
+    qApp->setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents, false);
+  }
 
   SetContentClient(&content_client_);
 

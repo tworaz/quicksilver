@@ -69,21 +69,31 @@
         'qt_gpu_integration',
       ],
       'sources': [
+        'browser/renderer_host/delegated_frame_node.cpp',
+        'browser/renderer_host/delegated_frame_node.h',
+        'browser/renderer_host/input/motion_event_qt.cc',
+        'browser/renderer_host/input/motion_event_qt.h',
         'browser/renderer_host/native_web_keyboard_event_qt.cpp',
         'browser/renderer_host/render_widget_host_view_qt.cc',
         'browser/renderer_host/render_widget_host_view_qt.h',
-        'browser/renderer_host/delegated_frame_node.h',
-        'browser/renderer_host/delegated_frame_node.cpp',
-        'browser/renderer_host/yuv_video_node.h',
-        'browser/renderer_host/yuv_video_node.cpp',
-        'browser/renderer_host/stream_video_node.h',
         'browser/renderer_host/stream_video_node.cpp',
-        'browser/renderer_host/web_event_factory.h',
+        'browser/renderer_host/stream_video_node.h',
         'browser/renderer_host/web_event_factory.cpp',
+        'browser/renderer_host/web_event_factory.h',
+        'browser/renderer_host/yuv_video_node.cpp',
+        'browser/renderer_host/yuv_video_node.h',
         'browser/web_contents/web_contents_view_qt.cc',
         'browser/web_contents/web_contents_view_qt.h',
       ],
     }, # content_browser_qt
+    {
+      'target_name': 'content_common_qt',
+      'type': 'static_library',
+      'sources': [
+        'public/common/content_switches_qt.cc',
+        'public/common/content_switches_qt.h',
+      ],
+    }, # content_common_qt
     {
       'target_name': 'shell_lib_qt_moc',
       'type': 'none',

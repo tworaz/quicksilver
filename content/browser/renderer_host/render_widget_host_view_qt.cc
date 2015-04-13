@@ -2,25 +2,65 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+/****************************************************************************
+**
+** Copyright (C) 2015 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
+**
+** This file is part of the QtWebEngine module of the Qt Toolkit.
+**
+** $QT_BEGIN_LICENSE:LGPL$
+** Commercial License Usage
+** Licensees holding valid commercial Qt licenses may use this file in
+** accordance with the commercial license agreement provided with the
+** Software or, alternatively, in accordance with the terms contained in
+** a written agreement between you and The Qt Company. For licensing terms
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
+**
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 3 as published by the Free Software
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** packaging of this file. Please review the following information to
+** ensure the GNU Lesser General Public License version 3 requirements
+** will be met: https://www.gnu.org/licenses/lgpl.html.
+**
+** GNU General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
+**
+** $QT_END_LICENSE$
+**
+****************************************************************************/
+
 #include "content/browser/renderer_host/render_widget_host_view_qt.h"
 
-#include <QScreen>
-#include <QQuickWindow>
-#include <QQuickItem>
 #include <QGuiApplication>
+#include <QQmlEngine>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QScreen>
 #include <QStyleHints>
 #include <QTextCharFormat>
-#include <QQmlEngine>
 #undef signals
 
+#include "base/command_line.h"
 #include "cc/output/compositor_frame_ack.h"
-#include "content/browser/renderer_host/render_widget_host_impl.h"
+#include "content/browser/renderer_host/input/motion_event_qt.h"
 #include "content/browser/renderer_host/render_view_host_impl.h"
+#include "content/browser/renderer_host/render_widget_host_impl.h"
 #include "content/browser/renderer_host/web_event_factory.h"
 #include "content/common/view_messages.h"
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/render_process_host.h"
+#include "content/public/common/content_switches_qt.h"
 #include "third_party/WebKit/public/platform/WebScreenInfo.h"
+#include "ui/events/blink/blink_event_util.h"
 #include "ui/gfx/geometry/dip_util.h"
 #include "ui/qt/type_conversion.h"
 
@@ -28,16 +68,64 @@ using blink::WebScreenInfo;
 
 namespace content {
 
+namespace {
+
+static inline int FirstAvailableId(const QMap<int, int> &map) {
+  ui::BitSet32 usedIds;
+  QMap<int, int>::const_iterator end = map.end();
+  for (QMap<int, int>::const_iterator it = map.begin(); it != end; ++it)
+    usedIds.mark_bit(it.value());
+  return usedIds.first_unmarked_bit();
+}
+
+static inline bool CompareTouchPoints(const QTouchEvent::TouchPoint& lhs,
+                                      const QTouchEvent::TouchPoint& rhs) {
+  // TouchPointPressed < TouchPointMoved < TouchPointReleased
+  return lhs.state() < rhs.state();
+}
+
+static inline ui::GestureProvider::Config QtGestureProviderConfig() {
+  ui::GestureProvider::Config config = ui::GetGestureProviderConfig(
+      ui::GestureProviderConfigType::CURRENT_PLATFORM);
+  // Causes an assert in CreateWebGestureEventFromGestureEventData and
+  // we don't need them in Qt.
+  config.gesture_begin_end_types_enabled = false;
+  config.gesture_detector_config.swipe_enabled = false;
+  config.gesture_detector_config.two_finger_tap_enabled = false;
+  return config;
+}
+
+ui::LatencyInfo CreateLatencyInfo(const blink::WebInputEvent& event) {
+  ui::LatencyInfo latency_info;
+  // The latency number should only be added if the timestamp is valid.
+  if (event.timeStampSeconds) {
+    const int64 time_micros = static_cast<int64>(
+        event.timeStampSeconds * base::Time::kMicrosecondsPerSecond);
+    latency_info.AddLatencyNumberWithTimestamp(
+        ui::INPUT_EVENT_LATENCY_ORIGINAL_COMPONENT,
+        0,
+        0,
+        base::TimeTicks() + base::TimeDelta::FromMicroseconds(time_micros),
+        1);
+  }
+  return latency_info;
+}
+
+} // namespace
+
 class RenderWidgetHostViewQtDelegate : public QQuickItem {
  public:
   RenderWidgetHostViewQtDelegate(RenderWidgetHostViewQt& rwhv)
       : QQuickItem(0),
-        rwhv_(rwhv) {
+        rwhv_(rwhv),
+        ignore_mouse_events_(false) {
     setFlags(QQuickItem::ItemHasContents);
     setAcceptedMouseButtons(Qt::AllButtons);
     setAcceptHoverEvents(true);
     setActiveFocusOnTab(true);
     setFocus(true);
+    ignore_mouse_events_ = base::CommandLine::ForCurrentProcess()->
+        HasSwitch(switches::kSimulateTouchScreenWithMouse);
   }
 
  protected:
@@ -65,28 +153,48 @@ class RenderWidgetHostViewQtDelegate : public QQuickItem {
   }
 
   void mouseMoveEvent(QMouseEvent* event) final {
-    rwhv_.HandleMouseEvent(event);
+    if (!ignore_mouse_events_) {
+      rwhv_.HandleMouseEvent(event);
+    } else {
+      event->ignore();
+    }
   }
 
   void mousePressEvent(QMouseEvent* event) final {
-    forceActiveFocus();
-    rwhv_.HandleMouseEvent(event);
+    if (!ignore_mouse_events_) {
+      forceActiveFocus();
+      rwhv_.HandleMouseEvent(event);
+    } else {
+      event->ignore();
+    }
   }
 
   void mouseReleaseEvent(QMouseEvent* event) final {
-    rwhv_.HandleMouseEvent(event);
+    if (!ignore_mouse_events_) {
+      rwhv_.HandleMouseEvent(event);
+    } else {
+      event->ignore();
+    }
   }
 
   void hoverMoveEvent(QHoverEvent* event) final {
-    rwhv_.HandleHoverEvent(event);
+    if (!ignore_mouse_events_) {
+      rwhv_.HandleHoverEvent(event);
+    } else {
+      event->ignore();
+    }
   }
 
   void wheelEvent(QWheelEvent* event) final {
-    rwhv_.HandleWheelEvent(event);
+    if (!ignore_mouse_events_) {
+      rwhv_.HandleWheelEvent(event);
+    } else {
+      event->ignore();
+    }
   }
 
   void touchEvent(QTouchEvent * event) final {
-    NOTIMPLEMENTED();
+    rwhv_.HandleTouchEvent(event);
   }
 
   void inputMethodEvent(QInputMethodEvent* event) final {
@@ -103,11 +211,14 @@ class RenderWidgetHostViewQtDelegate : public QQuickItem {
 
  private:
   RenderWidgetHostViewQt& rwhv_;
+  bool ignore_mouse_events_;
 };
 
 RenderWidgetHostViewQt::RenderWidgetHostViewQt(RenderWidgetHost* host,
                                                bool is_guest_view_hack)
     : host_(RenderWidgetHostImpl::From(host)),
+      gesture_provider_(QtGestureProviderConfig(), this),
+      send_motion_action_down_(false),
       input_method_(*qApp->inputMethod()),
       text_input_type_(ui::TEXT_INPUT_TYPE_NONE),
       compositor_data_(new ChromiumCompositorData),
@@ -383,6 +494,20 @@ void RenderWidgetHostViewQt::OnSwapCompositorFrame(uint32 output_surface_id,
   native_view_->update();
 }
 
+void RenderWidgetHostViewQt::ProcessAckedTouchEvent(
+    const TouchEventWithLatencyInfo& touch, InputEventAckState ack_result) {
+  const bool event_consumed = ack_result == INPUT_EVENT_ACK_STATE_CONSUMED;
+  gesture_provider_.OnAsyncTouchEventAck(event_consumed);
+}
+
+void RenderWidgetHostViewQt::OnGestureEvent(
+    const ui::GestureEventData& gesture) {
+  blink::WebGestureEvent web_gesture =
+      ui::CreateWebGestureEventFromGestureEventData(gesture);
+  host_->ForwardGestureEventWithLatencyInfo(web_gesture,
+                                            CreateLatencyInfo(web_gesture));
+}
+
 QSGNode* RenderWidgetHostViewQt::UpdatePaintNode(QSGNode* oldNode) {
   DelegatedFrameNode* frameNode = static_cast<DelegatedFrameNode *>(oldNode);
   if (!frameNode)
@@ -391,8 +516,9 @@ QSGNode* RenderWidgetHostViewQt::UpdatePaintNode(QSGNode* oldNode) {
   frameNode->commit(compositor_data_.data(), &resources_to_release_,
                     native_view_.get());
 
-  // This is possibly called from the Qt render thread, post the ack back to the UI
-  // to tell the child compositors to release resources and trigger a new frame.
+  // This is possibly called from the Qt render thread, post the ack back to
+  // the UI to tell the child compositors to release resources and trigger a
+  // new frame.
   if (needs_delegated_frame_ack_) {
     needs_delegated_frame_ack_ = false;
     BrowserThread::PostTask(BrowserThread::UI, FROM_HERE,
@@ -520,6 +646,99 @@ void RenderWidgetHostViewQt::HandleWheelEvent(QWheelEvent* evt) {
 void RenderWidgetHostViewQt::HandleHoverEvent(QHoverEvent* evt) {
   host_->ForwardMouseEvent(WebEventFactory::toWebMouseEvent(evt,
       current_device_scale_factor_));
+}
+
+void RenderWidgetHostViewQt::HandleTouchEvent(QTouchEvent* evt) {
+  // Chromium expects the touch event timestamps to be comparable to
+  // base::TimeTicks::Now(). Most importantly we also have to preserve the
+  // relative time distance between events. Calculate a delta between event
+  // timestamps and Now() on the first received event, and apply this delta to
+  // all successive events. This delta is most likely smaller than it
+  // should by calculating it here but this will hopefully cause less than one
+  // frame of delay.
+  base::TimeTicks eventTimestamp = base::TimeTicks() +
+      base::TimeDelta::FromMilliseconds(evt->timestamp());
+  if (events_to_now_delta_ == base::TimeDelta())
+    events_to_now_delta_ = base::TimeTicks::Now() - eventTimestamp;
+  eventTimestamp += events_to_now_delta_;
+
+  QList<QTouchEvent::TouchPoint> touchPoints =
+      MapTouchPointIds(evt->touchPoints());
+
+  if (evt->type() == QEvent::TouchCancel) {
+    MotionEventQt cancelEvent(touchPoints, eventTimestamp,
+        ui::MotionEvent::ACTION_CANCEL, evt->modifiers(),
+        current_device_scale_factor_);
+    ProcessMotionEvent(cancelEvent);
+    return;
+  }
+
+  if (evt->type() == QEvent::TouchBegin)
+    send_motion_action_down_ = true;
+
+  // Make sure that ACTION_POINTER_DOWN is delivered before ACTION_MOVE,
+  // and ACTION_MOVE before ACTION_POINTER_UP.
+  std::sort(touchPoints.begin(), touchPoints.end(), CompareTouchPoints);
+
+  for (int i = 0; i < touchPoints.size(); ++i) {
+    ui::MotionEvent::Action action;
+    switch (touchPoints[i].state()) {
+    case Qt::TouchPointPressed:
+      if (send_motion_action_down_) {
+        action = ui::MotionEvent::ACTION_DOWN;
+        send_motion_action_down_ = false;
+      } else {
+        action = ui::MotionEvent::ACTION_POINTER_DOWN;
+      }
+      break;
+    case Qt::TouchPointMoved:
+      action = ui::MotionEvent::ACTION_MOVE;
+      break;
+    case Qt::TouchPointReleased:
+      action = touchPoints.size() > 1 ?
+          ui::MotionEvent::ACTION_POINTER_UP :
+          ui::MotionEvent::ACTION_UP;
+      break;
+    default:
+      // Ignore Qt::TouchPointStationary
+      continue;
+    }
+
+    MotionEventQt motionEvent(touchPoints, eventTimestamp, action,
+        evt->modifiers(), current_device_scale_factor_, i);
+    ProcessMotionEvent(motionEvent);
+  }
+}
+
+QList<QTouchEvent::TouchPoint> RenderWidgetHostViewQt::MapTouchPointIds(
+    const QList<QTouchEvent::TouchPoint>& inputPoints) {
+  QList<QTouchEvent::TouchPoint> outputPoints = inputPoints;
+  for (int i = 0; i < outputPoints.size(); ++i) {
+    QTouchEvent::TouchPoint& point = outputPoints[i];
+
+    int qtId = point.id();
+    QMap<int, int>::const_iterator it = touch_id_mapping_.find(qtId);
+    if (it == touch_id_mapping_.end())
+      it = touch_id_mapping_.insert(qtId, FirstAvailableId(touch_id_mapping_));
+    point.setId(it.value());
+
+    if (point.state() == Qt::TouchPointReleased)
+      touch_id_mapping_.remove(qtId);
+  }
+  return outputPoints;
+}
+
+void RenderWidgetHostViewQt::ProcessMotionEvent(const ui::MotionEvent& event) {
+
+  ui::FilteredGestureProvider::TouchHandlingResult result =
+      gesture_provider_.OnTouchEvent(event);
+  if (!result.succeeded)
+    return;
+
+  blink::WebTouchEvent web_event =
+      ui::CreateWebTouchEventFromMotionEvent(event, result.did_generate_scroll);
+  host_->ForwardTouchEventWithLatencyInfo(web_event,
+                                          CreateLatencyInfo(web_event));
 }
 
 void RenderWidgetHostViewQt::HandleInputMethodEvent(QInputMethodEvent* evt) {

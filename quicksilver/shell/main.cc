@@ -45,11 +45,6 @@ int main(int argc, char* argv[]) {
   QQmlApplicationEngine engine;
   QQmlComponent component(&engine);
 
-  qDebug() << "Number of touch devices: " << QTouchDevice::devices().size();
-  Q_FOREACH (const QTouchDevice* d, QTouchDevice::devices()) {
-    qDebug() << "Device: " << d->name();
-  }
-
   engine.rootContext()->setContextProperty("InitialURL", url);
 
   if (!QuickSilver::Initialize(argc, argv)) {

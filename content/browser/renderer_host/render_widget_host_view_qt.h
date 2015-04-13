@@ -6,20 +6,28 @@
 #define CONTENT_BROWSER_RENDERER_HOST_RENDER_WIDGET_HOST_VIEW_QT_H_
 
 #include <QVariant>
+#include <QTouchEvent>
 
-#include "content/browser/renderer_host/render_widget_host_view_base.h"
-#include "content/browser/renderer_host/delegated_frame_node.h"
-#include "content/common/content_export.h"
 #include "cc/resources/returned_resource.h"
+#include "content/browser/renderer_host/delegated_frame_node.h"
+#include "content/browser/renderer_host/render_widget_host_view_base.h"
+#include "content/common/content_export.h"
+#include "ui/events/gesture_detection/filtered_gesture_provider.h"
+#include "ui/events/gesture_detection/gesture_provider.h"
 
-class QQuickItem;
-class QInputMethod;
 class QFocusEvent;
 class QHoverEvent;
-class QMouseEvent;
-class QWheelEvent;
+class QInputMethod;
 class QInputMethodEvent;
 class QKeyEvent;
+class QMouseEvent;
+class QQuickItem;
+class QTouchEvent;
+class QWheelEvent;
+
+namespace ui {
+class MotionEvent;
+}
 
 namespace content {
 
@@ -27,6 +35,7 @@ class RenderWidgetHostImpl;
 
 class CONTENT_EXPORT RenderWidgetHostViewQt
     : public RenderWidgetHostViewBase
+    , public ui::GestureProviderClient
     , public base::SupportsWeakPtr<RenderWidgetHostViewQt> {
  public:
   // When |is_guest_view_hack| is true, this view isn't really the view for
@@ -98,6 +107,11 @@ class CONTENT_EXPORT RenderWidgetHostViewQt
   gfx::GLSurfaceHandle GetCompositingSurface() override;
   void OnSwapCompositorFrame(uint32 output_surface_id,
       scoped_ptr<cc::CompositorFrame> frame) override;
+  void ProcessAckedTouchEvent(const TouchEventWithLatencyInfo& touch,
+                              InputEventAckState ack_result) override;
+
+  // Overridden from ui::GestureProviderClient.
+  void OnGestureEvent(const ui::GestureEventData&) override;
 
  protected:
   friend class RenderWidgetHostViewQtDelegate;
@@ -113,10 +127,15 @@ class CONTENT_EXPORT RenderWidgetHostViewQt
   void HandleMouseEvent(QMouseEvent*);
   void HandleWheelEvent(QWheelEvent*);
   void HandleHoverEvent(QHoverEvent*);
+  void HandleTouchEvent(QTouchEvent*);
   void HandleInputMethodEvent(QInputMethodEvent*);
 
  private:
   ~RenderWidgetHostViewQt() override;
+
+  QList<QTouchEvent::TouchPoint> MapTouchPointIds(
+      const QList<QTouchEvent::TouchPoint>& inputPoints);
+  void ProcessMotionEvent(const ui::MotionEvent&);
 
   struct MultipleMouseClickHelper {
     QPoint last_press_position;
@@ -131,8 +150,11 @@ class CONTENT_EXPORT RenderWidgetHostViewQt
         , last_press_timestamp(0) {}
   };
 
-  // The model object.
   RenderWidgetHostImpl* host_;
+  ui::FilteredGestureProvider gesture_provider_;
+  base::TimeDelta events_to_now_delta_;
+  QMap<int, int> touch_id_mapping_;
+  bool send_motion_action_down_;
 
   QInputMethod& input_method_;
   ui::TextInputType text_input_type_;
