@@ -113,7 +113,6 @@ DropData* WebContentsViewQt::GetDropData() const {
 }
 
 gfx::Rect WebContentsViewQt::GetViewBounds() const {
-  DCHECK(native_view_->window());
   QPointF scenePoint = native_view_->mapToScene(QPointF(0, 0));
   QPointF screenPos;
   if (native_view_->window())

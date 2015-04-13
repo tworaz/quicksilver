@@ -296,7 +296,6 @@ bool RenderWidgetHostViewQt::IsShowing() {
 }
 
 gfx::Rect RenderWidgetHostViewQt::GetViewBounds() const {
-  DCHECK(native_view_->window());
   QPointF scenePoint = native_view_->mapToScene(QPointF(0, 0));
   QPointF screenPos;
   if (native_view_->window())
@@ -450,8 +449,6 @@ bool RenderWidgetHostViewQt::HasAcceleratedSurface(
 }
 
 void RenderWidgetHostViewQt::GetScreenInfo(blink::WebScreenInfo* result) {
-  DCHECK(native_view_->window());
-
   QScreen* screen;
   if (native_view_->window()) {
     screen = native_view_->window()->screen();
