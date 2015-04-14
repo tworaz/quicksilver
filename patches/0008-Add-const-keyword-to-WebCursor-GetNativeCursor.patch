@@ -1,13 +1,11 @@
-From e0f405a8c54efdd6590ecc3515f8bc10a98df77a Mon Sep 17 00:00:00 2001
-From: Piotr Tworek <p.tworek@samsung.com>
-Date: Fri, 27 Mar 2015 17:09:18 +0100
-Subject: [PATCH 8/8] Add const keyword to WebCursor::GetNativeCursor()
+From 2e6187f104c762bf9e87f78dbd7f3a2dbe088b99 Mon Sep 17 00:00:00 2001
+From: Peter Tworek <tworaz666@gmail.com>
+Date: Tue, 14 Apr 2015 21:17:33 +0200
+Subject: [PATCH 8/9] Add const keyword to WebCursor::GetNativeCursor()
 
 The function should not actually modify WebCursor instance. Since
 content layer often gives us const WebCursor& the function is not usable
 anyway.
-
-Signed-off-by: Piotr Tworek <p.tworek@samsung.com>
 ---
  content/common/cursors/webcursor.h | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

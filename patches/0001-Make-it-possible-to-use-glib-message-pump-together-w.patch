@@ -1,7 +1,7 @@
-From 29adbb2b02cedb8e6ebbf2ee964d48c5e995d7df Mon Sep 17 00:00:00 2001
+From 01618531ccdd7dddaea0fe3f37a1d76b49674646 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Tue, 24 Mar 2015 17:56:58 +0100
-Subject: [PATCH 1/8] Make it possible to use glib message pump together with
+Subject: [PATCH 1/9] Make it possible to use glib message pump together with
  ozone
 
 Currently setting use_ozone to 1 makes glib support disabled by default.
@@ -16,7 +16,7 @@ Signed-off-by: Peter Tworek <tworaz666@gmail.com>
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/base/base.gyp b/base/base.gyp
-index 5fafb4b..3946f24 100644
+index b9362b4..562dcbb 100644
 --- a/base/base.gyp
 +++ b/base/base.gyp
 @@ -753,7 +753,7 @@
@@ -29,10 +29,10 @@ index 5fafb4b..3946f24 100644
              'message_loop/message_pump_glib_unittest.cc',
            ]
 diff --git a/base/base.gypi b/base/base.gypi
-index 7141bbf..811b8f7 100644
+index e0c5c7d..ed04b30 100644
 --- a/base/base.gypi
 +++ b/base/base.gypi
-@@ -923,7 +923,7 @@
+@@ -929,7 +929,7 @@
                'strings/string16.cc',
              ],
            },],

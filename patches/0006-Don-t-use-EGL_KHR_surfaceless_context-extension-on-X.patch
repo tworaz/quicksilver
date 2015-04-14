@@ -1,7 +1,7 @@
-From 9045f82c3f672f23801bb2099833c08f7bff2990 Mon Sep 17 00:00:00 2001
+From fd24b3953504e8d6d25ab56431eb0a171a7d3797 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Wed, 25 Mar 2015 22:16:48 +0100
-Subject: [PATCH 7/8] Don't use EGL_KHR_surfaceless_context extension on X11
+Subject: [PATCH 6/9] Don't use EGL_KHR_surfaceless_context extension on X11
  with EGL.
 
 For some reason this crashes inside mesa.

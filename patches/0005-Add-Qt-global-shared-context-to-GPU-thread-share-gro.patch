@@ -1,7 +1,7 @@
-From 94f41e2fb91254c45d13868f7c54fa1305732a5e Mon Sep 17 00:00:00 2001
+From e3db6b8993682f2ae21fabc3c6683d48203ad253 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Sun, 22 Mar 2015 18:10:50 +0100
-Subject: [PATCH 6/8] Add Qt global shared context to GPU thread share group.
+Subject: [PATCH 5/9] Add Qt global shared context to GPU thread share group.
 
 This allows Qt to access GL resources produced by chromium GPU thread.
 
@@ -11,7 +11,7 @@ Signed-off-by: Peter Tworek <tworaz666@gmail.com>
  1 file changed, 7 insertions(+)
 
 diff --git a/content/common/gpu/gpu_channel_manager.cc b/content/common/gpu/gpu_channel_manager.cc
-index 42263ff..c77f802 100644
+index 9fa18c1..a84d7e9 100644
 --- a/content/common/gpu/gpu_channel_manager.cc
 +++ b/content/common/gpu/gpu_channel_manager.cc
 @@ -26,6 +26,10 @@
@@ -25,7 +25,7 @@ index 42263ff..c77f802 100644
  namespace content {
  
  namespace {
-@@ -191,6 +195,9 @@ void GpuChannelManager::OnEstablishChannel(int client_id,
+@@ -193,6 +197,9 @@ void GpuChannelManager::OnEstablishChannel(int client_id,
    if (share_context) {
      if (!share_group_.get()) {
        share_group_ = new gfx::GLShareGroup;

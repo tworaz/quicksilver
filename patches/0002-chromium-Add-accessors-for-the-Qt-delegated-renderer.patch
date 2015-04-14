@@ -1,7 +1,7 @@
-From cb7935a1336dbe19a8bf102358e468565e6f71d8 Mon Sep 17 00:00:00 2001
+From 37124c378f4fe4eedcfd7497bb518f400f914f8c Mon Sep 17 00:00:00 2001
 From: Jocelyn Turcotte <jocelyn.turcotte@digia.com>
 Date: Fri, 20 Sep 2013 15:00:47 +0200
-Subject: [PATCH 3/8] <chromium> Add accessors for the Qt delegated renderer
+Subject: [PATCH 2/9] <chromium> Add accessors for the Qt delegated renderer
  integration.
 
 This is needed to fetch the MessageLoop, the MailboxManager and the

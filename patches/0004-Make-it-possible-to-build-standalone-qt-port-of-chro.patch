@@ -1,7 +1,7 @@
-From 3209b7ae3857577d5d3315b26db3dfc0c2281371 Mon Sep 17 00:00:00 2001
+From a9f07fa21126f88d4779c2285c45673791636c01 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Mon, 16 Mar 2015 00:04:41 +0100
-Subject: [PATCH 5/8] Make it possible to build standalone qt port of chromium
+Subject: [PATCH 4/9] Make it possible to build standalone qt port of chromium
 
 This patch adds necessary USE_QT ifdef guards making it possible to use
 Qt instead of aura as the platform abstraction and UI toolkit.
@@ -123,10 +123,10 @@ index be14374..6f2dd63 100644
  #endif
  #if defined(USE_OZONE)
 diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
-index 24122cd..9eb4026 100644
+index 4777b22..7a223be 100644
 --- a/content/browser/web_contents/web_contents_impl.cc
 +++ b/content/browser/web_contents/web_contents_impl.cc
-@@ -1196,6 +1196,10 @@ void WebContentsImpl::Init(const WebContents::CreateParams& params) {
+@@ -1203,6 +1203,10 @@ void WebContentsImpl::Init(const WebContents::CreateParams& params) {
    // it should be hidden.
    should_normally_be_visible_ = !params.initially_hidden;
  
@@ -137,7 +137,7 @@ index 24122cd..9eb4026 100644
    // Either both routing ids can be given, or neither can be.
    DCHECK((params.routing_id == MSG_ROUTING_NONE &&
                params.main_frame_routing_id == MSG_ROUTING_NONE) ||
-@@ -4402,6 +4406,12 @@ bool WebContentsImpl::GetAllowOtherViews() {
+@@ -4375,6 +4379,12 @@ bool WebContentsImpl::GetAllowOtherViews() {
  
  #endif
  
@@ -151,10 +151,10 @@ index 24122cd..9eb4026 100644
                                       int render_frame_id,
                                       IPC::Message* reply_msg,
 diff --git a/content/browser/web_contents/web_contents_impl.h b/content/browser/web_contents/web_contents_impl.h
-index 6753535..48b69f8 100644
+index 058d96d..6101c4a 100644
 --- a/content/browser/web_contents/web_contents_impl.h
 +++ b/content/browser/web_contents/web_contents_impl.h
-@@ -358,6 +358,10 @@ class CONTENT_EXPORT WebContentsImpl
+@@ -366,6 +366,10 @@ class CONTENT_EXPORT WebContentsImpl
    bool GetAllowOtherViews() override;
  #endif
  
@@ -165,7 +165,7 @@ index 6753535..48b69f8 100644
    // Implementation of PageNavigator.
    WebContents* OpenURL(const OpenURLParams& params) override;
  
-@@ -1259,6 +1263,10 @@ class CONTENT_EXPORT WebContentsImpl
+@@ -1269,6 +1273,10 @@ class CONTENT_EXPORT WebContentsImpl
    scoped_ptr<MediaWebContentsObserver> media_web_contents_observer_;
  #endif
  
@@ -177,7 +177,7 @@ index 6753535..48b69f8 100644
  
    DISALLOW_COPY_AND_ASSIGN(WebContentsImpl);
 diff --git a/content/content.gyp b/content/content.gyp
-index a5d4829..34fecf1 100644
+index f95cb90..e64aeb5 100644
 --- a/content/content.gyp
 +++ b/content/content.gyp
 @@ -7,6 +7,8 @@
@@ -190,7 +190,7 @@ index a5d4829..34fecf1 100644
    'target_defaults': {
      'defines': ['CONTENT_IMPLEMENTATION'],
 diff --git a/content/content_browser.gypi b/content/content_browser.gypi
-index 5512ae7..2c7bb3e 100644
+index 820ef87..0f9ba9f 100644
 --- a/content/content_browser.gypi
 +++ b/content/content_browser.gypi
 @@ -36,6 +36,7 @@
@@ -202,7 +202,7 @@ index 5512ae7..2c7bb3e 100644
    'export_dependent_settings': [
      '../ui/accessibility/accessibility.gyp:ax_gen',
 diff --git a/content/content_common.gypi b/content/content_common.gypi
-index c1ae9cf..4ee147f 100644
+index 70153aa..8eaabdd 100644
 --- a/content/content_common.gypi
 +++ b/content/content_common.gypi
 @@ -20,6 +20,7 @@
@@ -214,7 +214,7 @@ index c1ae9cf..4ee147f 100644
    'include_dirs': [
      '..',
 diff --git a/content/content_shell.gypi b/content/content_shell.gypi
-index 8c32ab7..e553a0f 100644
+index 5df6def..b3e6830 100644
 --- a/content/content_shell.gypi
 +++ b/content/content_shell.gypi
 @@ -16,6 +16,7 @@
