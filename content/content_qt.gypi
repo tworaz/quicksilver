@@ -45,6 +45,13 @@
         ]
       }], # content_child
 
+      ['_target_name=="content_renderer"', {
+        'sources': [
+          '<(DEPTH)/content/renderer/external_popup_menu.cc',
+          '<(DEPTH)/content/renderer/external_popup_menu.h',
+        ],
+      }], # content_renderer
+
       ['_target_name=="content_shell"', {
         'sources': [
           'shell/app/shell_main_qt.cc'

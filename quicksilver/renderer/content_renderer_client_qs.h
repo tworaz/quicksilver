@@ -19,6 +19,7 @@ class ContentRendererClientQS : public content::ContentRendererClient {
   ~ContentRendererClientQS() override;
 
   // ContentRendererClient implementation.
+  void RenderThreadStarted() override;
   void RenderViewCreated(content::RenderView* render_view) override;
   bool IsPluginAllowedToUseCompositorAPI(const GURL& url) override;
   bool IsPluginAllowedToUseDevChannelAPIs() override;

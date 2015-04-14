@@ -329,7 +329,7 @@ void RenderWidgetHostViewQt::UnlockMouse() {
 void RenderWidgetHostViewQt::InitAsPopup(
     RenderWidgetHostView* parent_host_view,
     const gfx::Rect& pos) {
-  NOTIMPLEMENTED();
+  NOTREACHED();
 }
 
 void RenderWidgetHostViewQt::InitAsFullscreen(

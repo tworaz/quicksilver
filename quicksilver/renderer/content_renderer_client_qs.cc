@@ -23,6 +23,10 @@ ContentRendererClientQS::ContentRendererClientQS() {
 ContentRendererClientQS::~ContentRendererClientQS() {
 }
 
+void ContentRendererClientQS::RenderThreadStarted() {
+  blink::WebView::setUseExternalPopupMenus(true);
+}
+
 void ContentRendererClientQS::RenderViewCreated(RenderView* render_view) {
   RenderViewImpl* rvi = static_cast<RenderViewImpl*>(render_view);
   ApplyCustomSettings(rvi->webview());
