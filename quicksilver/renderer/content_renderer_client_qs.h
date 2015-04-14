@@ -20,9 +20,18 @@ class ContentRendererClientQS : public content::ContentRendererClient {
 
   // ContentRendererClient implementation.
   void RenderThreadStarted() override;
+  void RenderFrameCreated(content::RenderFrame* render_frame) override;
   void RenderViewCreated(content::RenderView* render_view) override;
   bool IsPluginAllowedToUseCompositorAPI(const GURL& url) override;
   bool IsPluginAllowedToUseDevChannelAPIs() override;
+  bool ShouldSuppressErrorPage(content::RenderFrame* render_frame,
+                               const GURL& url) override;
+  void GetNavigationErrorStrings(content::RenderView* render_view,
+                                 blink::WebFrame* frame,
+                                 const blink::WebURLRequest& failed_request,
+                                 const blink::WebURLError& error,
+                                 std::string* error_html,
+                                 base::string16* error_description) override;
 
  private:
   static void ApplyCustomSettings(blink::WebView*);

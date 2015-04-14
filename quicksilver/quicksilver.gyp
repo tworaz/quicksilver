@@ -20,6 +20,7 @@
         '<(DEPTH)/skia/skia.gyp:skia',
         '<(DEPTH)/qt_port/build/system.gyp:qtgui',
         '<(DEPTH)/qt_port/build/system.gyp:qtquick',
+        '<(DEPTH)/qt_port/chrome/chrome_qt.gyp:chrome_error_pages',
         '<(DEPTH)/third_party/WebKit/public/blink_headers.gyp:blink_headers',
         'quicksilver_pak',
       ],
@@ -124,15 +125,20 @@
           'action_name': 'repack_quicksilver_pack',
           'variables': {
             'pak_inputs': [
-              '<(SHARED_INTERMEDIATE_DIR)/blink/public/resources/blink_resources.pak',
               '<(SHARED_INTERMEDIATE_DIR)/blink/public/resources/blink_image_resources_100_percent.pak',
+              '<(SHARED_INTERMEDIATE_DIR)/blink/public/resources/blink_resources.pak',
+              '<(SHARED_INTERMEDIATE_DIR)/chrome/renderer_resources_100_percent.pak',
               '<(SHARED_INTERMEDIATE_DIR)/content/app/resources/content_resources_100_percent.pak',
               '<(SHARED_INTERMEDIATE_DIR)/content/content_resources.pak',
               '<(SHARED_INTERMEDIATE_DIR)/net/net_resources.pak',
               '<(SHARED_INTERMEDIATE_DIR)/ui/resources/ui_resources_100_percent.pak',
+              '<(SHARED_INTERMEDIATE_DIR)/ui/resources/webui_resources.pak',
 
               # TODO: Store strings in the localization paks
+              '<(SHARED_INTERMEDIATE_DIR)/chrome/chromium_strings_en-US.pak',
+              '<(SHARED_INTERMEDIATE_DIR)/chrome/generated_resources_en-US.pak',
               '<(SHARED_INTERMEDIATE_DIR)/content/app/strings/content_strings_en-US.pak',
+              '<(SHARED_INTERMEDIATE_DIR)/ui/strings/app_locale_settings_en-US.pak',
             ],
             'pak_output': '<(PRODUCT_DIR)/quicksilver.pak',
           },

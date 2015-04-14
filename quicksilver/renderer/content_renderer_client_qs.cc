@@ -5,11 +5,14 @@
 #include "quicksilver/renderer/content_renderer_client_qs.h"
 
 #include "base/command_line.h"
+#include "chrome/common/localized_error.h"
+#include "chrome/renderer/net/net_error_helper.h"
 #include "components/web_cache/renderer/web_cache_render_process_observer.h"
 #include "content/public/common/content_switches.h"
 #include "content/public/renderer/render_thread.h"
 #include "content/renderer/render_view_impl.h"
 #include "ppapi/shared_impl/ppapi_switches.h"
+#include "third_party/WebKit/public/web/WebLocalFrame.h"
 #include "third_party/WebKit/public/web/WebSettings.h"
 #include "third_party/WebKit/public/web/WebView.h"
 
@@ -25,6 +28,14 @@ ContentRendererClientQS::~ContentRendererClientQS() {
 
 void ContentRendererClientQS::RenderThreadStarted() {
   blink::WebView::setUseExternalPopupMenus(true);
+}
+
+void ContentRendererClientQS::RenderFrameCreated(RenderFrame* render_frame) {
+  if (render_frame->GetRenderView()->GetMainRenderFrame() == render_frame) {
+    // Only attach NetErrorHelper to the main frame, since only the main frame
+    // should get error pages.
+    new NetErrorHelper(render_frame);
+  }
 }
 
 void ContentRendererClientQS::RenderViewCreated(RenderView* render_view) {
@@ -49,6 +60,37 @@ bool ContentRendererClientQS::IsPluginAllowedToUseDevChannelAPIs() {
 #else
   return false;
 #endif
+}
+
+bool ContentRendererClientQS::ShouldSuppressErrorPage(
+    RenderFrame* render_frame, const GURL& url) {
+  RenderView* render_view = render_frame->GetRenderView();
+  RenderFrame* main_render_frame = render_view->GetMainRenderFrame();
+  blink::WebFrame* web_frame = render_frame->GetWebFrame();
+  NetErrorHelper* net_error_helper = NetErrorHelper::Get(main_render_frame);
+  return net_error_helper->ShouldSuppressErrorPage(web_frame, url);
+}
+
+void ContentRendererClientQS::GetNavigationErrorStrings(
+    RenderView* render_view,
+    blink::WebFrame* frame,
+    const blink::WebURLRequest& failed_request,
+    const blink::WebURLError& error,
+    std::string* error_html,
+    base::string16* error_description) {
+
+  bool is_post = EqualsASCII(failed_request.httpMethod(), "POST");
+
+  if (error_html) {
+    content::RenderFrame* main_render_frame =
+        render_view->GetMainRenderFrame();
+    NetErrorHelper* helper = NetErrorHelper::Get(main_render_frame);
+    helper->GetErrorHTML(frame, error, is_post, error_html);
+  }
+
+  if (error_description) {
+    *error_description = LocalizedError::GetErrorDetails(error, is_post);
+  }
 }
 
 //static

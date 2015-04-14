@@ -4,9 +4,9 @@
 
 {
   'target_defaults': {
-      'include_dirs': [
-        '<(DEPTH)',
-      ],
+    'include_dirs': [
+      '<(DEPTH)',
+    ],
   },
 
   'targets': [
