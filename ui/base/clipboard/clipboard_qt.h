@@ -34,8 +34,8 @@
 **
 ****************************************************************************/
 
-#ifndef CLIPBOARD_QT_H
-#define CLIPBOARD_QT_H
+#ifndef UI_BASE_CLIPBOARD_CLIPBOARD_QT_H_
+#define UI_BASE_CLIPBOARD_CLIPBOARD_QT_H_
 
 #include "ui/base/clipboard/clipboard.h"
 
@@ -43,49 +43,66 @@
 #include <QMap>
 #include <QObject>
 
+namespace ui {
+
 class ClipboardChangeObserver : public QObject {
-    Q_OBJECT
-public:
-    ClipboardChangeObserver();
-    quint64 getSequenceNumber(QClipboard::Mode mode) {
-        return sequenceNumber.value(mode);
-    }
+  Q_OBJECT
+ public:
+  ClipboardChangeObserver();
+  ~ClipboardChangeObserver() override;
+  quint64 getSequenceNumber(QClipboard::Mode mode) {
+    return sequenceNumber.value(mode);
+  }
 
-private Q_SLOTS:
-    void trackChange(QClipboard::Mode mode);
+ private Q_SLOTS:
+  void trackChange(QClipboard::Mode mode);
 
-private:
-    QMap<QClipboard::Mode, quint64> sequenceNumber;
+ private:
+  QMap<QClipboard::Mode, quint64> sequenceNumber;
 };
 
-class ClipboardQt : public ui::Clipboard {
-public:
-    virtual uint64 GetSequenceNumber(ui::ClipboardType type) const Q_DECL_OVERRIDE;
-    virtual bool IsFormatAvailable(const FormatType& format, ui::ClipboardType type) const Q_DECL_OVERRIDE;
-    virtual void Clear(ui::ClipboardType type) Q_DECL_OVERRIDE;
-    virtual void ReadAvailableTypes(ui::ClipboardType type, std::vector<base::string16>* types, bool* contains_filenames) const Q_DECL_OVERRIDE;
-    virtual void ReadText(ui::ClipboardType type, base::string16* result) const Q_DECL_OVERRIDE;
-    virtual void ReadAsciiText(ui::ClipboardType type, std::string* result) const Q_DECL_OVERRIDE;
-    virtual void ReadHTML(ui::ClipboardType type,
-                        base::string16* markup,
-                        std::string* src_url,
-                        uint32* fragment_start,
-                        uint32* fragment_end) const Q_DECL_OVERRIDE;
-    virtual void ReadRTF(ui::ClipboardType type, std::string* result) const Q_DECL_OVERRIDE;
-    virtual SkBitmap ReadImage(ui::ClipboardType type) const Q_DECL_OVERRIDE;
-    virtual void ReadCustomData(ui::ClipboardType clipboard_type, const base::string16& type, base::string16* result) const Q_DECL_OVERRIDE;
-    virtual void ReadBookmark(base::string16* title, std::string* url) const Q_DECL_OVERRIDE;
-    virtual void ReadData(const FormatType& format, std::string* result) const Q_DECL_OVERRIDE;
+class ClipboardQt : public Clipboard {
+ public:
+  ClipboardQt();
+  ~ClipboardQt() override;
 
-protected:
-    virtual void WriteObjects(ui::ClipboardType type, const ObjectMap& objects) Q_DECL_OVERRIDE;
-    virtual void WriteText(const char* text_data, size_t text_len) Q_DECL_OVERRIDE;
-    virtual void WriteHTML(const char* markup_data, size_t markup_len, const char* url_data, size_t url_len) Q_DECL_OVERRIDE;
-    virtual void WriteRTF(const char* rtf_data, size_t data_len) Q_DECL_OVERRIDE;
-    virtual void WriteBookmark(const char* title_data, size_t title_len, const char* url_data, size_t url_len) Q_DECL_OVERRIDE;
-    virtual void WriteWebSmartPaste() Q_DECL_OVERRIDE;
-    virtual void WriteBitmap(const SkBitmap& bitmap) Q_DECL_OVERRIDE;
-    virtual void WriteData(const FormatType& format, const char* data_data, size_t data_len) Q_DECL_OVERRIDE;
+  uint64 GetSequenceNumber(ClipboardType type) const override;
+  bool IsFormatAvailable(const FormatType& format,
+                         ClipboardType type) const override;
+  void Clear(ClipboardType type) override;
+  void ReadAvailableTypes(ClipboardType type, std::vector<base::string16>*
+                          types, bool* contains_filenames) const override;
+  void ReadText(ClipboardType type, base::string16* result) const override;
+  void ReadAsciiText(ClipboardType type, std::string* result) const override;
+  void ReadHTML(ClipboardType type,
+                      base::string16* markup,
+                      std::string* src_url,
+                      uint32* fragment_start,
+                      uint32* fragment_end) const override;
+  void ReadRTF(ClipboardType type, std::string* result) const override;
+  SkBitmap ReadImage(ClipboardType type) const override;
+  void ReadCustomData(ClipboardType clipboard_type,
+                      const base::string16& type,
+                      base::string16* result) const override;
+  void ReadBookmark(base::string16* title, std::string* url) const override;
+  void ReadData(const FormatType& format, std::string* result) const override;
+
+ protected:
+  void WriteObjects(ClipboardType type, const ObjectMap& objects) override;
+  void WriteText(const char* text_data, size_t text_len) override;
+  void WriteHTML(const char* markup_data, size_t markup_len,
+                 const char* url_data, size_t url_len) override;
+  void WriteRTF(const char* rtf_data, size_t data_len) override;
+  void WriteBookmark(const char* title_data, size_t title_len,
+                     const char* url_data, size_t url_len) override;
+  void WriteWebSmartPaste() override;
+  void WriteBitmap(const SkBitmap& bitmap) override;
+  void WriteData(const FormatType& format, const char* data_data,
+                 size_t data_len) override;
+
+  DISALLOW_COPY_AND_ASSIGN(ClipboardQt);
 };
 
-#endif
+} // namespace ui
+
+#endif // UI_BASE_CLIPBOARD_CLIPBOARD_QT_H_

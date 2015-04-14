@@ -50,11 +50,16 @@
 #include "ui/base/clipboard/custom_data_helper.h"
 #include "ui/qt/type_conversion.h"
 
+namespace ui {
+
 Q_GLOBAL_STATIC(ClipboardChangeObserver, clipboardChangeObserver)
 
 ClipboardChangeObserver::ClipboardChangeObserver()
 {
     connect(QGuiApplication::clipboard(), SIGNAL(changed(QClipboard::Mode)), SLOT(trackChange(QClipboard::Mode)));
+}
+
+ClipboardChangeObserver::~ClipboardChangeObserver() {
 }
 
 void ClipboardChangeObserver::trackChange(QClipboard::Mode mode)
@@ -79,8 +84,6 @@ QMimeData *getUncommittedData()
 }
 
 }  // namespace
-
-namespace ui {
 
 // Factory function
 Clipboard* Clipboard::Create() {
@@ -185,7 +188,12 @@ bool Clipboard::FormatType::operator<(const FormatType& other) const
 }
 #endif
 
-} // namespace ui
+ClipboardQt::ClipboardQt()
+    : Clipboard() {
+}
+
+ClipboardQt::~ClipboardQt() {
+}
 
 void ClipboardQt::WriteObjects(ui::ClipboardType type, const ObjectMap& objects)
 {
@@ -357,4 +365,4 @@ uint64 ClipboardQt::GetSequenceNumber(ui::ClipboardType type) const
     return clipboardChangeObserver()->getSequenceNumber(type == ui::CLIPBOARD_TYPE_COPY_PASTE ? QClipboard::Clipboard : QClipboard::Selection);
 }
 
-
+} // namespace ui
