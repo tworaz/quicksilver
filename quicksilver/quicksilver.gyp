@@ -59,6 +59,8 @@
         'browser/message_pump_qt.h',
         'browser/network_delegate_qs.cc',
         'browser/network_delegate_qs.h',
+        'browser/permission_manager_qs.cc',
+        'browser/permission_manager_qs.h',
         'browser/url_request_context_getter_qs.cc',
         'browser/url_request_context_getter_qs.h',
         'browser/web_view_impl.cc',

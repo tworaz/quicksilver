@@ -82,6 +82,7 @@ class BrowserContextQS : public content::BrowserContext {
       content::URLRequestInterceptorScopedVector request_interceptors);
 
   scoped_ptr<ResourceContextQS> resource_context_;
+  scoped_ptr<content::PermissionManager> permission_manager_;
   scoped_refptr<URLRequestContextGetterQS> url_request_getter_;
 
   base::FilePath path_;

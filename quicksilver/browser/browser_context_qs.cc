@@ -6,6 +6,7 @@
 #include "quicksilver/browser/browser_context_qs.h"
 
 #include <QGuiApplication>
+#undef signals
 
 #include "base/command_line.h"
 #include "base/files/file_util.h"
@@ -13,6 +14,7 @@
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/storage_partition.h"
 #include "content/public/common/content_switches.h"
+#include "quicksilver/browser/permission_manager_qs.h"
 #include "quicksilver/browser/url_request_context_getter_qs.h"
 
 using namespace content;
@@ -132,8 +134,9 @@ SSLHostStateDelegate* BrowserContextQS::GetSSLHostStateDelegate() {
 }
 
 PermissionManager* BrowserContextQS::GetPermissionManager() {
-  NOTIMPLEMENTED();
-  return NULL;
+  if (!permission_manager_.get())
+    permission_manager_.reset(new PermissionManagerQS());
+  return permission_manager_.get();
 }
 
 net::URLRequestContextGetter* BrowserContextQS::CreateRequestContext(
