@@ -68,7 +68,6 @@ ApplicationWindow {
 
     function createTab(url) {
       var tab = addTab("", tabWebViewComponent)
-      tab.title = Qt.binding(function() { return tab.item.title })
       tab.active = true
       if (url)
         tab.item.loadURL(url)
@@ -78,7 +77,19 @@ ApplicationWindow {
 
     Component {
       id: tabWebViewComponent
-      QuickSilverWebView {}
+
+      QuickSilverWebView {
+        Component.onCompleted: {
+          parent.title = Qt.binding(function() { return title })
+        }
+
+        onNewWindowPermissionRequest: {
+          console.log("Allowing new window request for: " + request.url)
+          request.accept()
+        }
+
+        onCreateNewWindow: tabs.createTab()
+      }
     }
 
     style: TabViewStyle {

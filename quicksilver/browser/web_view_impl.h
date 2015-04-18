@@ -51,12 +51,7 @@ class WebViewImpl
       const GURL& target_url,
       const std::string& partition_id,
       content::SessionStorageNamespace* session_storage_namespace) override;
-  void WebContentsCreated(
-      content::WebContents* source_contents,
-      int opener_render_frame_id,
-      const base::string16& frame_name,
-      const GURL& target_url,
-      content::WebContents* new_contents) override;
+  bool WebContentsCreateAsync(WebContentsCreateCallback) override;
   void LoadProgressChanged(content::WebContents* source,
                            double progress) override;
 

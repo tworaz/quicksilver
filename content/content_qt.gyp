@@ -59,6 +59,9 @@
       'include_dirs!': [
         '<(DEPTH)/third_party/khronos',
       ],
+      'defines': [
+        'CONTENT_IMPLEMENTATION',
+      ],
       'dependencies': [
         '<(DEPTH)/qt_port/build/system.gyp:qtcore',
         '<(DEPTH)/qt_port/build/system.gyp:qtgui',
@@ -82,6 +85,8 @@
         'browser/renderer_host/web_event_factory.h',
         'browser/renderer_host/yuv_video_node.cpp',
         'browser/renderer_host/yuv_video_node.h',
+        'browser/web_contents/web_contents_impl_qt.cc',
+        'browser/web_contents/web_contents_impl_qt.h',
         'browser/web_contents/web_contents_view_qt.cc',
         'browser/web_contents/web_contents_view_qt.h',
       ],

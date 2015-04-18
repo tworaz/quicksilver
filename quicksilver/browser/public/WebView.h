@@ -13,6 +13,8 @@ class WebViewImpl;
 
 namespace QuickSilver {
 
+class NewWindowPermissionRequest;
+
 class WebView : public QQuickItem {
  Q_OBJECT
 
@@ -40,6 +42,9 @@ class WebView : public QQuickItem {
   void canGoBackChanged(bool);
   void loadingChanged(bool);
   void loadProgressChanged(double);
+  void newWindowPermissionRequest(
+      QuickSilver::NewWindowPermissionRequest* request);
+  void createNewWindow();
 
  protected:
   friend class QuickSilverImpl::WebViewImpl;

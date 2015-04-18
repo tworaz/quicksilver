@@ -5,18 +5,35 @@
 #include "quicksilver/browser/web_view_impl.h"
 
 #include "base/strings/utf_string_conversions.h"
+#include "content/browser/web_contents/web_contents_impl_qt.h"
 #include "content/browser/web_contents/web_contents_view_qt.h"
 #include "quicksilver/browser/browser_context_qs.h"
 #include "quicksilver/browser/content_browser_client_qs.h"
+#include "quicksilver/browser/public/NewWindowPermissionRequest.h"
 #include "quicksilver/browser/public/WebView.h"
+#include "ui/qt/type_conversion.h"
 
 using namespace content;
+using namespace QuickSilver;
 
 namespace QuickSilverImpl {
 
+namespace {
+
+static WebContents* NullCreateWebContents(void*) {
+  return NULL;
+}
+
+WebContentsDelegate::WebContentsCreateCallback g_new_web_contents_create_cb =
+    base::Bind(&NullCreateWebContents);
+
+} // namespace
+
 // static
 QQuickItem* WebViewImpl::CreateNativeView(const WebContents* wc) {
-  const WebViewImpl* thiz = static_cast<WebViewImpl*>(wc->GetPlatformData());
+  const WebContentsImplQt* wci = static_cast<const WebContentsImplQt*>(wc);
+  const WebViewImpl* thiz = static_cast<WebViewImpl*>(wci->GetPlatformData());
+  DCHECK(thiz);
   return thiz->web_view_;
 }
 
@@ -28,16 +45,21 @@ WebViewImpl::WebViewImpl(QuickSilver::WebView* web_view)
       can_go_back_(false),
       is_loading_(false),
       load_progress_(0.f) {
-  bool nv_factory_set = false;
+  static bool nv_factory_set = false;
   if (!nv_factory_set) {
     WebContentsViewQt::SetNativeViewFactoryDelegate(
         &WebViewImpl::CreateNativeView);
     nv_factory_set = true;
   }
-  WebContents::CreateParams params(
-      ContentBrowserClientQS::Get()->browser_context());
-  params.platform_data = this;
-  web_contents_.reset(WebContents::Create(params));
+
+  WebContents* web_contents = g_new_web_contents_create_cb.Run(this);
+  if (!web_contents) {
+    WebContents::CreateParams params(
+        ContentBrowserClientQS::Get()->browser_context());
+    params.platform_data = this;
+    web_contents = WebContents::Create(params);
+  }
+  web_contents_.reset(web_contents);
   web_contents_->SetDelegate(this);
   this->Observe(web_contents_.get());
 }
@@ -124,17 +146,17 @@ bool WebViewImpl::ShouldCreateWebContents(
     const GURL& target_url,
     const std::string& partition_id,
     content::SessionStorageNamespace* session_storage_namespace) {
-  LOG(ERROR) << "TODO: Add support for creating popups";
-  return false;
+  NewWindowPermissionRequest request(toQt(target_url.spec()));
+  web_view_->newWindowPermissionRequest(&request);
+  return request.isAccepted();
 }
 
-void WebViewImpl::WebContentsCreated(
-    content::WebContents* source_contents,
-    int opener_render_frame_id,
-    const base::string16& frame_name,
-    const GURL& target_url,
-    content::WebContents* new_contents) {
-  NOTREACHED() << "Popup windows not supported, yet";
+bool WebViewImpl::WebContentsCreateAsync(
+    WebContentsDelegate::WebContentsCreateCallback cb) {
+  g_new_web_contents_create_cb = cb;
+  web_view_->createNewWindow();
+  g_new_web_contents_create_cb = base::Bind(&NullCreateWebContents);
+  return true;
 }
 
 void WebViewImpl::NavigationEntryCommitted(

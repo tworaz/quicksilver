@@ -44,8 +44,14 @@
       'sources': [
         'browser/public/Init.cc',
         'browser/public/Init.h',
+        'browser/public/NewWindowPermissionRequest.cc',
+        'browser/public/NewWindowPermissionRequest.h',
+        'browser/public/PermissionRequest.cc',
+        'browser/public/PermissionRequest.h',
         'browser/public/WebView.cc',
         'browser/public/WebView.h',
+        '<(moc_gen_dir)/moc_NewWindowPermissionRequest.cc',
+        '<(moc_gen_dir)/moc_PermissionRequest.cc',
         '<(moc_gen_dir)/moc_WebView.cc',
 
         'browser/browser_context_qs.cc',
@@ -92,6 +98,8 @@
       'target_name': 'quicksilver_moc',
       'type': 'none',
       'sources': [
+        'browser/public/NewWindowPermissionRequest.h',
+        'browser/public/PermissionRequest.h',
         'browser/public/WebView.h',
       ],
       'rules': [{
