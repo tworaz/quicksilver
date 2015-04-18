@@ -139,30 +139,6 @@ base::TimeTicks MotionEventQt::GetEventTime() const {
   return event_time_;
 }
 
-size_t MotionEventQt::GetHistorySize() const {
-  return 0;
-}
-
-base::TimeTicks MotionEventQt::GetHistoricalEventTime(
-    size_t historical_index) const {
-  return base::TimeTicks();
-}
-
-float MotionEventQt::GetHistoricalTouchMajor(
-    size_t pointer_index, size_t historical_index) const {
-  return 0;
-}
-
-float MotionEventQt::GetHistoricalX(
-    size_t pointer_index, size_t historical_index) const {
-  return 0;
-}
-
-float MotionEventQt::GetHistoricalY(
-    size_t pointer_index, size_t historical_index) const {
-  return 0;
-}
-
 ui::MotionEvent::ToolType MotionEventQt::GetToolType(
     size_t pointer_index) const {
   return ui::MotionEvent::TOOL_TYPE_UNKNOWN;

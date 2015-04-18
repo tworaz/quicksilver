@@ -71,15 +71,6 @@ class MotionEventQt : public ui::MotionEvent {
   int GetFlags() const override;
   float GetPressure(size_t pointer_index) const override;
   base::TimeTicks GetEventTime() const override;
-  size_t GetHistorySize() const override;
-  base::TimeTicks GetHistoricalEventTime(
-      size_t historical_index) const override;
-  float GetHistoricalTouchMajor(size_t pointer_index,
-                                size_t historical_index) const override;
-  float GetHistoricalX(size_t pointer_index,
-                       size_t historical_index) const override;
-  float GetHistoricalY(size_t pointer_index,
-                       size_t historical_index) const override;
   ToolType GetToolType(size_t pointer_index) const override;
   int GetButtonState() const override;
 
