@@ -1,7 +1,7 @@
-From df161674f67243db451c511505a0f20bbc5abd3a Mon Sep 17 00:00:00 2001
+From 5482663c062eac261e2babb66f305d019a28f2ae Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Thu, 9 Apr 2015 21:53:07 +0200
-Subject: [PATCH 7/9] Don't include preloaded ICU headers when using system
+Subject: [PATCH 8/9] Don't include preloaded ICU headers when using system
  version of the lib
 
 Without this fix when compiling the code with use_system_icu=1 flag

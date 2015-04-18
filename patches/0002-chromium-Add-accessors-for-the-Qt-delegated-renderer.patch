@@ -1,4 +1,4 @@
-From 37124c378f4fe4eedcfd7497bb518f400f914f8c Mon Sep 17 00:00:00 2001
+From 07f13c613a70b72d990440f1755d5ac11a471a24 Mon Sep 17 00:00:00 2001
 From: Jocelyn Turcotte <jocelyn.turcotte@digia.com>
 Date: Fri, 20 Sep 2013 15:00:47 +0200
 Subject: [PATCH 2/9] <chromium> Add accessors for the Qt delegated renderer

@@ -1,4 +1,4 @@
-From a9f07fa21126f88d4779c2285c45673791636c01 Mon Sep 17 00:00:00 2001
+From 663e6522cb491490e6b85102d0170aa5d8c101a9 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Mon, 16 Mar 2015 00:04:41 +0100
 Subject: [PATCH 4/9] Make it possible to build standalone qt port of chromium
@@ -12,18 +12,20 @@ Signed-off-by: Peter Tworek <tworaz666@gmail.com>
  content/browser/browser_main_loop.cc              | 12 ++++++++++--
  content/browser/gpu/compositor_util.cc            |  2 +-
  content/browser/gpu/gpu_process_host.cc           |  2 +-
- content/browser/web_contents/web_contents_impl.cc | 10 ++++++++++
- content/browser/web_contents/web_contents_impl.h  |  8 ++++++++
+ content/browser/web_contents/web_contents_impl.cc |  4 ++++
+ content/browser/web_contents/web_contents_impl.h  |  3 +++
  content/content.gyp                               |  2 ++
  content/content_browser.gypi                      |  1 +
  content/content_common.gypi                       |  1 +
  content/content_shell.gypi                        |  3 +++
- content/public/browser/web_contents.h             |  9 +++++++++
+ content/public/browser/web_contents.h             |  5 +++++
+ content/public/browser/web_contents_delegate.cc   |  7 +++++++
+ content/public/browser/web_contents_delegate.h    |  5 +++++
  ui/base/clipboard/clipboard.h                     |  4 ++--
  ui/base/ui_base.gyp                               |  2 ++
  ui/gfx/native_widget_types.h                      | 14 ++++++++++++--
  ui/gl/gl.gyp                                      |  2 ++
- 15 files changed, 73 insertions(+), 8 deletions(-)
+ 17 files changed, 70 insertions(+), 8 deletions(-)
 
 diff --git a/base/run_loop.h b/base/run_loop.h
 index 0024108..045708b 100644
@@ -53,7 +55,7 @@ index 0024108..045708b 100644
  #if defined(OS_IOS)
    // iOS doesn't support the blocking MessageLoop::Run, so it calls
 diff --git a/content/browser/browser_main_loop.cc b/content/browser/browser_main_loop.cc
-index fcb540c..385674c 100644
+index d485389..21670fc 100644
 --- a/content/browser/browser_main_loop.cc
 +++ b/content/browser/browser_main_loop.cc
 @@ -61,7 +61,7 @@
@@ -123,59 +125,55 @@ index be14374..6f2dd63 100644
  #endif
  #if defined(USE_OZONE)
 diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
-index 4777b22..7a223be 100644
+index 05f9806..e9216c8 100644
 --- a/content/browser/web_contents/web_contents_impl.cc
 +++ b/content/browser/web_contents/web_contents_impl.cc
-@@ -1203,6 +1203,10 @@ void WebContentsImpl::Init(const WebContents::CreateParams& params) {
-   // it should be hidden.
-   should_normally_be_visible_ = !params.initially_hidden;
+@@ -209,6 +209,7 @@ WebContents* WebContents::Create(const WebContents::CreateParams& params) {
+       params, static_cast<WebContentsImpl*>(params.opener));
+ }
  
-+#if defined(USE_QT)
-+  platform_data_ = params.platform_data;
++#if !defined(USE_QT)
+ WebContents* WebContents::CreateWithSessionStorage(
+     const WebContents::CreateParams& params,
+     const SessionStorageNamespaceMap& session_storage_namespace_map) {
+@@ -226,6 +227,7 @@ WebContents* WebContents::CreateWithSessionStorage(
+   new_contents->Init(params);
+   return new_contents;
+ }
 +#endif
-+
-   // Either both routing ids can be given, or neither can be.
-   DCHECK((params.routing_id == MSG_ROUTING_NONE &&
-               params.main_frame_routing_id == MSG_ROUTING_NONE) ||
-@@ -4375,6 +4379,12 @@ bool WebContentsImpl::GetAllowOtherViews() {
  
- #endif
+ void WebContentsImpl::FriendZone::AddCreatedCallbackForTesting(
+     const CreatedCallback& callback) {
+@@ -421,6 +423,7 @@ WebContentsImpl::~WebContentsImpl() {
+                                        destruction_observers_.end());
+ }
  
-+#if defined(USE_QT)
-+void* WebContentsImpl::GetPlatformData() const {
-+  return platform_data_;
-+}
++#if !defined(USE_QT)
+ WebContentsImpl* WebContentsImpl::CreateWithOpener(
+     const WebContents::CreateParams& params,
+     WebContentsImpl* opener) {
+@@ -439,6 +442,7 @@ WebContentsImpl* WebContentsImpl::CreateWithOpener(
+   new_contents->Init(params);
+   return new_contents;
+ }
 +#endif
-+
- void WebContentsImpl::OnDialogClosed(int render_process_id,
-                                      int render_frame_id,
-                                      IPC::Message* reply_msg,
+ 
+ // static
+ std::vector<WebContentsImpl*> WebContentsImpl::GetAllWebContents() {
 diff --git a/content/browser/web_contents/web_contents_impl.h b/content/browser/web_contents/web_contents_impl.h
-index 058d96d..6101c4a 100644
+index dc1eede..86f5b69 100644
 --- a/content/browser/web_contents/web_contents_impl.h
 +++ b/content/browser/web_contents/web_contents_impl.h
-@@ -366,6 +366,10 @@ class CONTENT_EXPORT WebContentsImpl
-   bool GetAllowOtherViews() override;
- #endif
- 
+@@ -708,6 +708,9 @@ class CONTENT_EXPORT WebContentsImpl
+  private:
+   friend class WebContentsObserver;
+   friend class WebContents;  // To implement factory methods.
 +#if defined(USE_QT)
-+  void* GetPlatformData() const override;
++  friend class WebContentsImplQt;
 +#endif
-+
-   // Implementation of PageNavigator.
-   WebContents* OpenURL(const OpenURLParams& params) override;
  
-@@ -1269,6 +1273,10 @@ class CONTENT_EXPORT WebContentsImpl
-   scoped_ptr<MediaWebContentsObserver> media_web_contents_observer_;
- #endif
- 
-+#if defined(USE_QT)
-+  void* platform_data_;
-+#endif
-+
-   base::WeakPtrFactory<WebContentsImpl> loading_weak_factory_;
- 
-   DISALLOW_COPY_AND_ASSIGN(WebContentsImpl);
+   FRIEND_TEST_ALL_PREFIXES(WebContentsImplTest, NoJSMessageOnInterstitials);
+   FRIEND_TEST_ALL_PREFIXES(WebContentsImplTest, UpdateTitle);
 diff --git a/content/content.gyp b/content/content.gyp
 index f95cb90..e64aeb5 100644
 --- a/content/content.gyp
@@ -190,7 +188,7 @@ index f95cb90..e64aeb5 100644
    'target_defaults': {
      'defines': ['CONTENT_IMPLEMENTATION'],
 diff --git a/content/content_browser.gypi b/content/content_browser.gypi
-index 820ef87..0f9ba9f 100644
+index 65500f8..4f7c231 100644
 --- a/content/content_browser.gypi
 +++ b/content/content_browser.gypi
 @@ -36,6 +36,7 @@
@@ -202,7 +200,7 @@ index 820ef87..0f9ba9f 100644
    'export_dependent_settings': [
      '../ui/accessibility/accessibility.gyp:ax_gen',
 diff --git a/content/content_common.gypi b/content/content_common.gypi
-index 70153aa..8eaabdd 100644
+index c380dfb..8314f0c 100644
 --- a/content/content_common.gypi
 +++ b/content/content_common.gypi
 @@ -20,6 +20,7 @@
@@ -242,7 +240,7 @@ index 5df6def..b3e6830 100644
        'include_dirs': [
          '..',
 diff --git a/content/public/browser/web_contents.h b/content/public/browser/web_contents.h
-index 4380412..c3625b5 100644
+index 4380412..5b86a19 100644
 --- a/content/public/browser/web_contents.h
 +++ b/content/public/browser/web_contents.h
 @@ -128,6 +128,11 @@ class WebContents : public PageNavigator,
@@ -257,17 +255,38 @@ index 4380412..c3625b5 100644
    };
  
    // Creates a new WebContents.
-@@ -641,6 +646,10 @@ class WebContents : public PageNavigator,
-   virtual bool GetAllowOtherViews() = 0;
- #endif  // OS_ANDROID
+diff --git a/content/public/browser/web_contents_delegate.cc b/content/public/browser/web_contents_delegate.cc
+index d4028fb..98086ef 100644
+--- a/content/public/browser/web_contents_delegate.cc
++++ b/content/public/browser/web_contents_delegate.cc
+@@ -222,4 +222,11 @@ bool WebContentsDelegate::SaveFrame(const GURL& url, const Referrer& referrer) {
+   return false;
+ }
  
 +#if defined(USE_QT)
-+  virtual void* GetPlatformData() const = 0;
++bool WebContentsDelegate::WebContentsCreateAsync(
++    WebContentsCreateCallback) {
++  return false;
++};
 +#endif
 +
-  private:
-   // This interface should only be implemented inside content.
-   friend class WebContentsImpl;
+ }  // namespace content
+diff --git a/content/public/browser/web_contents_delegate.h b/content/public/browser/web_contents_delegate.h
+index ef73451..ba4eaa1 100644
+--- a/content/public/browser/web_contents_delegate.h
++++ b/content/public/browser/web_contents_delegate.h
+@@ -481,6 +481,11 @@ class CONTENT_EXPORT WebContentsDelegate {
+   // default behavior is suppressed.
+   virtual bool SaveFrame(const GURL& url, const Referrer& referrer);
+ 
++#if defined(USE_QT)
++  typedef base::Callback<WebContents*(void*)> WebContentsCreateCallback;
++  virtual bool WebContentsCreateAsync(WebContentsCreateCallback);
++#endif
++
+  protected:
+   virtual ~WebContentsDelegate();
+ 
 diff --git a/ui/base/clipboard/clipboard.h b/ui/base/clipboard/clipboard.h
 index 6c23a6d..a488626 100644
 --- a/ui/base/clipboard/clipboard.h

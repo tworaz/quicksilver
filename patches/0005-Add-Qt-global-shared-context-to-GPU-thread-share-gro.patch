@@ -1,4 +1,4 @@
-From e3db6b8993682f2ae21fabc3c6683d48203ad253 Mon Sep 17 00:00:00 2001
+From 1eadabbb8ddd4788534d020e6e6a8a370349c2e1 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Sun, 22 Mar 2015 18:10:50 +0100
 Subject: [PATCH 5/9] Add Qt global shared context to GPU thread share group.

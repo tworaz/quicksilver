@@ -1,4 +1,4 @@
-From fd24b3953504e8d6d25ab56431eb0a171a7d3797 Mon Sep 17 00:00:00 2001
+From 58a2e8e53c66b10821dfc2efc5ee9a5e68318d21 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
 Date: Wed, 25 Mar 2015 22:16:48 +0100
 Subject: [PATCH 6/9] Don't use EGL_KHR_surfaceless_context extension on X11

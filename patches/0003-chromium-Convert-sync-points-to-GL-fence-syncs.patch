@@ -1,4 +1,4 @@
-From b9d1a587e48fdafb7532cef577dcd2d02ede3d70 Mon Sep 17 00:00:00 2001
+From 97d92518890e85981f90031b45caffb677725058 Mon Sep 17 00:00:00 2001
 From: Jocelyn Turcotte <jocelyn.turcotte@digia.com>
 Date: Wed, 5 Nov 2014 18:55:49 +0100
 Subject: [PATCH 3/9] <chromium> Convert sync points to GL fence syncs.

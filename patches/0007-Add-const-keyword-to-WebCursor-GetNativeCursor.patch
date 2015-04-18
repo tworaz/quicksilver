@@ -1,7 +1,7 @@
-From 2e6187f104c762bf9e87f78dbd7f3a2dbe088b99 Mon Sep 17 00:00:00 2001
+From 2c38e7afe68557f54408c7111e3b4c92bddebb09 Mon Sep 17 00:00:00 2001
 From: Peter Tworek <tworaz666@gmail.com>
-Date: Tue, 14 Apr 2015 21:17:33 +0200
-Subject: [PATCH 8/9] Add const keyword to WebCursor::GetNativeCursor()
+Date: Sat, 18 Apr 2015 14:04:20 +0200
+Subject: [PATCH 7/9] Add const keyword to WebCursor::GetNativeCursor()
 
 The function should not actually modify WebCursor instance. Since
 content layer often gives us const WebCursor& the function is not usable
