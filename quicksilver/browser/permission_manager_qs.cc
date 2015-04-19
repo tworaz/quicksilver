@@ -5,6 +5,7 @@
 #include "quicksilver/browser/permission_manager_qs.h"
 
 #include "base/callback.h"
+#include "base/logging.h"
 #include "content/public/browser/permission_type.h"
 
 using namespace content;
