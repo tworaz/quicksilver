@@ -121,10 +121,11 @@
       'target_name': 'quicksilver_pak',
       'type': 'none',
       'dependencies': [
-        '<(DEPTH)/third_party/WebKit/public/blink_resources.gyp:blink_resources',
-        '<(DEPTH)/third_party/WebKit/public/blink_resources.gyp:blink_image_resources',
+        '<(DEPTH)/components/components.gyp:devtools_http_handler',
         '<(DEPTH)/content/content.gyp:content_resources',
         '<(DEPTH)/net/net.gyp:net_resources',
+        '<(DEPTH)/third_party/WebKit/public/blink_resources.gyp:blink_image_resources',
+        '<(DEPTH)/third_party/WebKit/public/blink_resources.gyp:blink_resources',
         '<(DEPTH)/ui/resources/ui_resources.gyp:ui_resources',
         '<(DEPTH)/ui/strings/ui_strings.gyp:ui_strings',
       ],

@@ -140,6 +140,7 @@ $_top_dir/build/gyp_chromium \
   -Duse_libpci=0 \
   -Duse_kerberos=0 \
   -Duse_openssl=1 \
+  -Duse_nss_certs=0 \
   -Duse_openssl_certs=1 \
   -Ddisable_fatal_linker_warnings=1 \
   -Denable_plugins=0 \

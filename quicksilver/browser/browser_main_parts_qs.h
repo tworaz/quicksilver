@@ -12,7 +12,7 @@
 #include "net/log/net_log.h"
 #include "quicksilver/browser/browser_context_qs.h"
 
-namespace content {
+namespace devtools_http_handler {
 class DevToolsHttpHandler;
 }
 
@@ -42,7 +42,7 @@ class BrowserMainPartsQS : public content::BrowserMainParts {
   scoped_ptr<net::NetLog> net_log_;
   scoped_ptr<BrowserContextQS> browser_context_;
   scoped_ptr<BrowserContextQS> off_the_record_browser_context_;
-  scoped_ptr<content::DevToolsHttpHandler> devtools_http_handler_;
+  scoped_ptr<devtools_http_handler::DevToolsHttpHandler> devtools_http_handler_;
 
   DISALLOW_COPY_AND_ASSIGN(BrowserMainPartsQS);
 };

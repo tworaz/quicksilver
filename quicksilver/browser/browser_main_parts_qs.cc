@@ -6,7 +6,7 @@
 #include "quicksilver/browser/browser_main_parts_qs.h"
 
 #include "base/logging.h"
-#include "content/public/browser/devtools_http_handler.h"
+#include "components/devtools_http_handler/devtools_http_handler.h"
 #include "content/shell/browser/shell_net_log.h"
 
 using namespace content;
