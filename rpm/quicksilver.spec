@@ -4,7 +4,7 @@
 
 Name:    quicksilver
 Summary: Chromium based WebView component for Qt Quick
-Version: 44.0.2381.0
+Version: 44.0.2391.0
 Release: 1
 Group:   Applications/Internet
 License: LGPL and MIT

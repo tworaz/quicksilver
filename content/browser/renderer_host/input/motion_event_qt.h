@@ -56,7 +56,7 @@ class MotionEventQt : public ui::MotionEvent {
                 int index = -1);
   ~MotionEventQt() override;
 
-  int GetId() const override;
+  uint32 GetUniqueEventId() const override;
   Action GetAction() const override;
   int GetActionIndex() const override;
   size_t GetPointerCount() const override;

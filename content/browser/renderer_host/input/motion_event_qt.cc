@@ -77,7 +77,7 @@ MotionEventQt::MotionEventQt(
 MotionEventQt::~MotionEventQt() {
 }
 
-int MotionEventQt::GetId() const {
+uint32 MotionEventQt::GetUniqueEventId() const {
   return 0;
 }
 

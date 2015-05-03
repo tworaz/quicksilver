@@ -128,7 +128,8 @@ void ContentRendererClientQS::ApplyCustomSettings(blink::WebView* web_view) {
   settings->setClobberUserAgentInitialScaleQuirk(false);
   settings->setIgnoreMainFrameOverflowHiddenQuirk(false);
   settings->setReportScreenSizeInPhysicalPixelsQuirk(false);
-  settings->setShrinksStandaloneImagesToFit(false);
+  settings->setShrinksViewportContentToFit(true);
+  settings->setUseMobileViewportStyle(true);
 #endif // OS_SAILFISH
 }
 

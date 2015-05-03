@@ -32,7 +32,7 @@ function configure_for_sailfish() {
     "
  SYSTEM_GYP_ARGS="\
    ${SYSTEM_GYP_ARGS} \
-   -Duse_system_icu=1 \
+   -Duse_system_icu=0 \
    -Duse_system_flac=1 \
    -Duse_system_expat=1 \
    -Duse_system_libjpeg=1 \
