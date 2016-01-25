@@ -1,0 +1,30 @@
+From faf1eb4d48db8f49ab5090fdf1e54a9054915759 Mon Sep 17 00:00:00 2001
+From: Piotr Tworek <tworaz666@gmail.com>
+Date: Sat, 8 Aug 2015 17:34:22 +0200
+Subject: [PATCH 4/4] Don't suppress char events after render widget gains
+ focus.
+
+---
+ content/browser/renderer_host/render_widget_host_view_aura.cc | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/content/browser/renderer_host/render_widget_host_view_aura.cc b/content/browser/renderer_host/render_widget_host_view_aura.cc
+index 62f970b..e88315f 100644
+--- a/content/browser/renderer_host/render_widget_host_view_aura.cc
++++ b/content/browser/renderer_host/render_widget_host_view_aura.cc
+@@ -2281,10 +2281,12 @@ void RenderWidgetHostViewAura::OnWindowFocused(aura::Window* gained_focus,
+       // object.
+       input_method->SetFocusedTextInputClient(this);
+ 
++#if !defined(QUICKSILVER)
+       // Often the application can set focus to the view in response to a key
+       // down. However the following char event shouldn't be sent to the web
+       // page.
+       host_->SuppressNextCharEvents();
++#endif
+     }
+ 
+     BrowserAccessibilityManager* manager =
+-- 
+2.4.6
+

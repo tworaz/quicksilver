@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Name=QuickSilver Shell
+Type=Application
+Comment=QuickSilver demo browser
+Terminal=false
+Exec=quicksilver_shell
+Icon=chromium

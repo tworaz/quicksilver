@@ -1,0 +1,25 @@
+From 2bc404378dc789b99977d0b337f266c6f202e92f Mon Sep 17 00:00:00 2001
+From: Piotr Tworek <tworaz666@gmail.com>
+Date: Tue, 15 Sep 2015 17:04:51 +0200
+Subject: [PATCH 5/5] [QuickSilver] Add dedicated entrypoint for QuickSilver
+ IPC messages.
+
+---
+ ipc/ipc_message_start.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/ipc/ipc_message_start.h b/ipc/ipc_message_start.h
+index 718bfa7..fd188d6 100644
+--- a/ipc/ipc_message_start.h
++++ b/ipc/ipc_message_start.h
+@@ -126,6 +126,7 @@ enum IPCMessageStart {
+   AttachmentBrokerMsgStart,
+   RenderProcessMsgStart,
+   PageLoadMetricsMsgStart,
++  QuickSilverMsgStart,
+   LastIPCMsgStart  // Must come last.
+ };
+ 
+-- 
+2.4.9
+

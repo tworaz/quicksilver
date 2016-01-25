@@ -1,0 +1,13 @@
+prefix=__prefix__
+exec_prefix=${prefix}
+libdir=__libdir__
+includedir=__includedir__
+
+Name: QuickSilver
+Description: QuickSilver browser component
+Version: __version__
+
+Requires:
+Libs: -L${libdir} -lquicksilver
+Cflags: -I${includedir}
+

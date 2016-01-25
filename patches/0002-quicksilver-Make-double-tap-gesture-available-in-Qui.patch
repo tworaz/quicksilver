@@ -1,0 +1,30 @@
+From 524f12230673feac5e159b4b518d31bf0922eaa6 Mon Sep 17 00:00:00 2001
+From: Piotr Tworek <tworaz666@gmail.com>
+Date: Fri, 31 Jul 2015 21:41:22 +0200
+Subject: [PATCH 2/2] [quicksilver] Make double tap gesture available in
+ QuickSilver.
+
+Would be nice of this could be controlled by gesture config.
+---
+ ui/events/gestures/gesture_provider_aura.cc | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/ui/events/gestures/gesture_provider_aura.cc b/ui/events/gestures/gesture_provider_aura.cc
+index b491a2f..39f97bc 100644
+--- a/ui/events/gestures/gesture_provider_aura.cc
++++ b/ui/events/gestures/gesture_provider_aura.cc
+@@ -19,7 +19,11 @@ GestureProviderAura::GestureProviderAura(GestureProviderAuraClient* client)
+           GetGestureProviderConfig(GestureProviderConfigType::CURRENT_PLATFORM),
+           this),
+       handling_event_(false) {
++#if defined(QUICKSILVER)
++  filtered_gesture_provider_.SetDoubleTapSupportForPlatformEnabled(true);
++#else
+   filtered_gesture_provider_.SetDoubleTapSupportForPlatformEnabled(false);
++#endif
+ }
+ 
+ GestureProviderAura::~GestureProviderAura() {}
+-- 
+2.4.6
+

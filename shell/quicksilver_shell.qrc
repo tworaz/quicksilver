@@ -1,0 +1,26 @@
+<RCC>
+  <qresource prefix="/">
+    <file>icons/add.png</file>
+    <file>icons/add_black.png</file>
+    <file>icons/back.png</file>
+    <file>icons/back_black.png</file>
+    <file>icons/close.png</file>
+    <file>icons/close_black.png</file>
+    <file>icons/forward.png</file>
+    <file>icons/reload.png</file>
+    <file>icons/stop.png</file>
+    <file>icons/tabs.png</file>
+    <file>ui/common/BackgroundItem.qml</file>
+    <file>ui/common/ContextMenu.qml</file>
+    <file>ui/common/DialogButton.qml</file>
+    <file>ui/common/JavaScriptDialog.qml</file>
+    <file>ui/common/PermissionDialog.qml</file>
+    <file>ui/common/TopIndicator.qml</file>
+    <file>ui/common/UIState.qml</file>
+    <file>ui/desktop/Chrome.qml</file>
+    <file>ui/desktop/TabsView.qml</file>
+    <file>ui/sailfish/Chrome.qml</file>
+    <file>ui/sailfish/TabsPage.qml</file>
+  </qresource>
+</RCC>
+

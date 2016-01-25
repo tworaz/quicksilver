@@ -1,0 +1,33 @@
+From 84033d42e97d5ede609ab42df8676f01360b18ee Mon Sep 17 00:00:00 2001
+From: Piotr Tworek <tworaz666@gmail.com>
+Date: Thu, 23 Jul 2015 12:52:29 +0200
+Subject: [PATCH] [quicksilver] Make RWHV_Aura use Mobile orientation for
+ QuickSilver.
+
+It'd be nice to introduce some switch to control this behaviour. The
+patch could be upstreamed this way.
+---
+ content/browser/renderer_host/render_widget_host_view_aura.cc | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/content/browser/renderer_host/render_widget_host_view_aura.cc b/content/browser/renderer_host/render_widget_host_view_aura.cc
+index ae83db3..224f544 100644
+--- a/content/browser/renderer_host/render_widget_host_view_aura.cc
++++ b/content/browser/renderer_host/render_widget_host_view_aura.cc
+@@ -269,8 +269,13 @@ void GetScreenInfoForWindow(WebScreenInfo* results, aura::Window* window) {
+   else if (results->orientationAngle == 270)
+     results->orientationAngle = 90;
+ 
++#if defined(QUICKSILVER)
++  results->orientationType =
++      RenderWidgetHostViewBase::GetOrientationTypeForMobile(display);
++#else
+   results->orientationType =
+       RenderWidgetHostViewBase::GetOrientationTypeForDesktop(display);
++#endif
+ }
+ 
+ bool IsFractionalScaleFactor(float scale_factor) {
+-- 
+2.3.6
+

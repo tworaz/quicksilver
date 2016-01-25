@@ -1,0 +1,61 @@
+From 8ae3e9c3a74a4c7209e50a85db12fa2d4baa3b0d Mon Sep 17 00:00:00 2001
+From: Piotr Tworek <tworaz666@gmail.com>
+Date: Sat, 1 Aug 2015 20:47:41 +0200
+Subject: [PATCH 3/3] [quicksilver] Allow embedder to provide custom renderer
+ preferences.
+
+It seems there is no other way so far to provide custom renderer
+preferences. Since the RendererPreferences are part of the public API
+lets make it possible.
+
+This patch should be proposed upstream.
+---
+ content/browser/web_contents/web_contents_impl.cc | 4 ++++
+ content/browser/web_contents/web_contents_impl.h  | 1 +
+ content/public/browser/web_contents.h             | 3 +++
+ 3 files changed, 8 insertions(+)
+
+diff --git a/content/browser/web_contents/web_contents_impl.cc b/content/browser/web_contents/web_contents_impl.cc
+index d4a71ad..af71efa 100644
+--- a/content/browser/web_contents/web_contents_impl.cc
++++ b/content/browser/web_contents/web_contents_impl.cc
+@@ -2467,6 +2467,10 @@ RendererPreferences* WebContentsImpl::GetMutableRendererPrefs() {
+   return &renderer_preferences_;
+ }
+ 
++void WebContentsImpl::SetRendererPreferences(RendererPreferences& prefs) {
++  renderer_preferences_ = prefs;
++}
++
+ void WebContentsImpl::Close() {
+   Close(GetRenderViewHost());
+ }
+diff --git a/content/browser/web_contents/web_contents_impl.h b/content/browser/web_contents/web_contents_impl.h
+index e86b20a..984d286 100644
+--- a/content/browser/web_contents/web_contents_impl.h
++++ b/content/browser/web_contents/web_contents_impl.h
+@@ -331,6 +331,7 @@ class CONTENT_EXPORT WebContentsImpl
+   void SetOverrideEncoding(const std::string& encoding) override;
+   void ResetOverrideEncoding() override;
+   RendererPreferences* GetMutableRendererPrefs() override;
++  void SetRendererPreferences(RendererPreferences&) override;
+   void Close() override;
+   void SystemDragEnded() override;
+   void UserGestureDone() override;
+diff --git a/content/public/browser/web_contents.h b/content/public/browser/web_contents.h
+index 4ed6a40..5af14f2 100644
+--- a/content/public/browser/web_contents.h
++++ b/content/public/browser/web_contents.h
+@@ -544,6 +544,9 @@ class WebContents : public PageNavigator,
+   // Returns the settings which get passed to the renderer.
+   virtual content::RendererPreferences* GetMutableRendererPrefs() = 0;
+ 
++  // Sets the settings which will get passed to the renderer.
++  virtual void SetRendererPreferences(content::RendererPreferences&) = 0;
++
+   // Tells the tab to close now. The tab will take care not to close until it's
+   // out of nested message loops.
+   virtual void Close() = 0;
+-- 
+2.4.6
+

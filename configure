@@ -1,0 +1,179 @@
+#!/bin/bash
+
+_script=$(readlink -f $0)
+_script_dir=$(dirname $_script)
+_top_dir=$_script_dir/..
+
+EXTRA_GYP_ARGS=""
+SYSTEM_GYP_ARGS=""
+OUT_DIR="out.qt.$(uname -m)"
+
+function show_help() {
+cat << EOF
+usage: $1 [options] [extra gyp flags]
+
+Options:
+  -a|--arm                Configure the code for arm architecture.
+  -b|--scratchbox         Configure the build to run under scratchbox.
+  -c|--proprietary-codecs Allow chromium to use proprietary codes for in the AV backend.
+  -o|--outdir <dir>       Specify build output dir (Default: out.qt.$(uname -m)).
+  -p|--profile <profile>  Specify default quick silver profile.
+  -r|--release            Enable release specific optimizations.
+  -s|--sailfish           Configure qt_port to for SailfishOS.
+  -t|--system-tools       Use system tools (gcc, ld, as) to build the code.
+  -h|--help               Show this help message.
+EOF
+exit 0
+}
+
+function configure_for_sailfish() {
+  EXTRA_GYP_ARGS="\
+      $EXTRA_GYP_ARGS \
+      -Dsailfish=1 \
+      -Duse_pulseaudio=1 \
+      -Dlinux_link_pulseaudio=1 \
+      -Dicu_use_data_file_flag=0 \
+      "
+ SYSTEM_GYP_ARGS="\
+     ${SYSTEM_GYP_ARGS} \
+     -Duse_system_expat=1 \
+     -Duse_system_flac=1 \
+     -Duse_system_fontconfig=1 \
+     -Duse_system_icu=0 \
+     -Duse_system_libbzip=1 \
+     -Duse_system_libevent=1 \
+     -Duse_system_libexif=1 \
+     -Duse_system_libjpeg=1 \
+     -Duse_system_libspeex=1 \
+     -Duse_system_libusb=0 \
+     -Duse_system_libxml=1 \
+     -Duse_system_libxslt=1 \
+     -Duse_system_sqlite=0 \
+     "
+}
+
+function configure_for_armv7hl() {
+  EXTRA_GYP_ARGS="\
+      $EXTRA_GYP_ARGS \
+      -Darm_version=7 \
+      -Darm_thumb=1 \
+      -Darm_neon=1 \
+      -Darm_float_abi=hard \
+      "
+}
+
+function use_system_tools() {
+  EXTRA_GYP_ARGS="\
+      $EXTRA_GYP_ARGS \
+      -Dclang=0 \
+      -Dlinux_use_bundled_binutils=0 \
+      -Dlinux_use_bundled_gold=0 \
+      -Dlinux_use_gold_flags=0 \
+      "
+}
+
+function release_optimize() {
+  EXTRA_GYP_ARGS="\
+     $EXTRA_GYP_ARGS \
+     -Drelease_optimize=s \
+     -Dremove_webcore_debug_symbols=1 \
+     -Dlinux_dump_symbols=1 \
+     -Drelease_unwind_tables=0 \
+     -Dtracing_like_official_build=1 \
+     "
+}
+
+function use_proprietary_codecs() {
+  EXTRA_GYP_ARGS="\
+      $EXTRA_GYP_ARGS \
+      -Dproprietary_codecs=1 \
+      -Dffmpeg_branding=Chrome \
+      "
+}
+
+function replace_gyp_files() {
+  if [ "${SYSTEM_GYP_ARGS}" != "" ]; then
+    $_top_dir/build/linux/unbundle/replace_gyp_files.py ${SYSTEM_GYP_ARGS} "$@"
+  fi
+}
+
+USER_GYP_ARGS=""
+while [[ $# > 0 ]]; do
+  case $1 in
+   -a|--armv7hl)
+     configure_for_armv7hl
+     ;;
+   -b|--scratchbox)
+     EXTRA_GYP_ARGS="$EXTRA_GYP_ARGS --no-parallel -Dsysroot="
+     ;;
+   -h|--help)
+     show_help
+     ;;
+   -r|--release)
+     release_optimize
+     ;;
+   -s|--sailfish)
+      configure_for_sailfish
+     ;;
+   -c|--proprietary-codecs)
+     use_proprietary_codecs
+     ;;
+   -p|--profile)
+     EXTRA_GYP_ARGS="$EXTRA_GYP_ARGS -Dquicksilver_profile=$2"
+     shift
+     ;;
+   -t|--system-tools)
+     use_system_tools
+     ;;
+   -o|--outdir)
+     OUT_DIR="$2"
+     shift
+     ;;
+   *)
+     USER_GYP_ARGS="${USER_GYP_ARGS} $1"
+     ;;
+  esac
+  shift
+done
+
+trap "echo cleanup; replace_gyp_files --undo" ERR SIGINT SIGTERM SIGQUIT
+replace_gyp_files
+
+$_top_dir/build/gyp_chromium \
+  $_top_dir/quicksilver/quicksilver.gyp \
+  -I $_top_dir/quicksilver/quicksilver.gypi \
+  -Goutput_dir=$_top_dir/${OUT_DIR} \
+  --generator-output=$_top_dir/${OUT_DIR} \
+  -Duse_ozone=1 \
+  -Dozone_platform_qt=1 \
+  -Dozone_auto_platforms=0 \
+  -Dremoting=0 \
+  -Duse_glib=1 \
+  -Duse_allocator=none \
+  -Duse_aura=1 \
+  -Dtoolkit_views=0 \
+  -Duse_dbus=1 \
+  -Duse_gconf=0 \
+  -Duse_gio=0 \
+  -Duse_gnome_keyring=0 \
+  -Duse_cups=0 \
+  -Duse_libpci=0 \
+  -Duse_kerberos=0 \
+  -Duse_openssl=1 \
+  -Duse_nss_certs=1 \
+  -Duse_openssl_certs=0 \
+  -Ddisable_fatal_linker_warnings=1 \
+  -Denable_plugins=0 \
+  -Ddisable_nacl=1 \
+  -Denable_extensions=0 \
+  ${EXTRA_GYP_ARGS} \
+  ${SYSTEM_GYP_ARGS} \
+  ${USER_GYP_ARGS}
+
+ret=$?
+
+replace_gyp_files --undo
+
+if [ $ret == 0 ]; then
+  printf "\nTo build the code run:\n$ ninja -C ${OUT_DIR}/Debug quicksilver_shell\n"
+fi
